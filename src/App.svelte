@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount } from 'svelte'
   import { createWebSocket } from '$lib/websocket.js'
-  import { connectionStatus, toasts, currentUser } from '$lib/stores.js'
+  import { connectionStatus, toasts, currentUser, currentRoom } from '$lib/stores.js'
   import { dismissToast } from '$lib/toast.js'
   import Player from './components/Player.svelte'
   import Queue from './components/Queue.svelte'
@@ -10,6 +10,7 @@
   import PlaybackControls from './components/PlaybackControls.svelte'
   import Chat from './components/Chat.svelte'
   import JoinModal from './components/JoinModal.svelte'
+  import TutorialTooltip from './components/TutorialTooltip.svelte'
 
   const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'
   const APP_TITLE = import.meta.env.VITE_APP_TITLE || 'SyncTune'
@@ -30,8 +31,9 @@
 
     // ถ้าเคย join ไว้ใน session เดิม ให้ join อัตโนมัติ
     const savedUsername = sessionStorage.getItem('username')
+    const savedRoomId = sessionStorage.getItem('room_id')
     if (savedUsername) {
-      handleJoin({ detail: { username: savedUsername } })
+      handleJoin({ detail: { username: savedUsername, room_id: savedRoomId || null } })
     }
   })
 
@@ -46,10 +48,12 @@
   }
 
   function handleJoin(e) {
-    const { username } = e.detail
+    const { username, room_id } = e.detail
     currentUser.set({ id: null, username, profile_img: '' })
-    ws.join(username)
+    ws.join(username, '', room_id)
     sessionStorage.setItem('username', username)
+    if (room_id) sessionStorage.setItem('room_id', room_id)
+    else sessionStorage.removeItem('room_id')
     showJoinModal = false
   }
 </script>
@@ -59,10 +63,23 @@
 </svelte:head>
 
 <JoinModal visible={showJoinModal} on:join={handleJoin} />
+<TutorialTooltip />
 
 <div class="app">
   <header class="app-header">
-    <h1 class="app-title">{APP_TITLE}</h1>
+    <div class="header-left">
+      <h1 class="app-title">{APP_TITLE}</h1>
+      {#if $currentRoom}
+        <button
+          class="room-badge"
+          title="คลิกเพื่อคัดลอก Room ID"
+          on:click={() => navigator.clipboard.writeText($currentRoom)}
+          data-tutorial="room"
+        >
+          #{$currentRoom}
+        </button>
+      {/if}
+    </div>
     <div class="header-right">
       {#if $currentUser}
         <div class="current-user">
@@ -80,7 +97,7 @@
           ขาดการเชื่อมต่อ
         {/if}
       </div>
-      <button class="theme-toggle" on:click={toggleTheme} title="สลับธีม" aria-label="สลับ light/dark mode">
+      <button class="theme-toggle" on:click={toggleTheme} title="สลับธีม" aria-label="สลับ light/dark mode" data-tutorial="theme">
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
     </div>
@@ -89,14 +106,14 @@
   <main class="app-main">
     <div class="player-section">
       <Player {ws} />
-      <PlaybackControls {ws} />
-      <AddSong {ws} />
-      <Chat {ws} />
+      <div data-tutorial="playback-controls"><PlaybackControls {ws} /></div>
+      <div data-tutorial="add-song"><AddSong {ws} /></div>
+      <div data-tutorial="chat-section"><Chat {ws} /></div>
     </div>
 
     <div class="sidebar">
-      <Queue {ws} />
-      <div class="history-section">
+      <div data-tutorial="queue-section"><Queue {ws} /></div>
+      <div class="history-section" data-tutorial="history-section">
         <History {ws} />
       </div>
     </div>
@@ -202,12 +219,37 @@
     z-index: 100;
   }
 
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .app-title {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
     color: var(--yt-red);
     letter-spacing: -0.02em;
+  }
+
+  .room-badge {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: monospace;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .room-badge:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
   }
 
   .header-right {

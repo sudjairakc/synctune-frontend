@@ -38,3 +38,6 @@ export const onlineUsers = writable([])
 
 // chatHistory คือรายการข้อความแชท
 export const chatHistory = writable([])
+
+// currentRoom คือ room_id ของห้องที่กำลังอยู่ (null ถ้ายังไม่ได้ join)
+export const currentRoom = writable(null)

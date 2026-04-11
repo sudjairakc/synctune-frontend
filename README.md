@@ -65,7 +65,7 @@ synctune-frontend/
         ├── History.svelte            ← Playback history + requeue
         ├── PlaybackControls.svelte   ← Autoplay / Shuffle / Random toggle
         ├── Chat.svelte               ← Real-time chat + online users list
-        └── JoinModal.svelte          ← Modal ตั้งชื่อก่อนเข้าใช้งาน
+        └── JoinModal.svelte          ← Modal ตั้งชื่อ + Room ID ก่อนเข้าใช้งาน
 ```
 
 ---
@@ -76,7 +76,8 @@ synctune-frontend/
 
 | Event | ผลที่เกิด |
 |---|---|
-| `initial_state` | โหลด queue, seek, history, playback mode, chat history, online users |
+| `room_joined` | set room_id + โหลด queue, seek, history, playback mode, chat history, online users |
+| `initial_state` | เหมือน `room_joined` (backward-compat) |
 | `queue_updated` | อัปเดต queue, currentIndex, isPlaying, history |
 | `seek_sync` | ตรวจ drift แล้ว seek ถ้าเกิน 3 วิ |
 | `playback_mode_updated` | อัปเดต autoplay / shuffle / random |
@@ -84,13 +85,13 @@ synctune-frontend/
 | `user_joined` | อัปเดต online users + toast notice |
 | `user_left` | อัปเดต online users |
 | `message_received` | append ลง chat |
-| `error` | toast error (รองรับ error codes) |
+| `error` | toast error (`NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED`) |
 
 ### Client → Server
 
 | Event | ส่งเมื่อ |
 |---|---|
-| `join` | อัตโนมัติหลัง connect (ผ่าน `ws.join()`) |
+| `join` | อัตโนมัติหลัง connect (ผ่าน `ws.join(username, '', room_id?)`) — ไม่ส่ง room_id = สร้างห้องใหม่ |
 | `add_song` | กดปุ่มเพิ่มเพลง หรือ requeue จาก history |
 | `remove_song` | กด ✕ ใน queue |
 | `reorder_queue` | drag & drop เพลงในคิว |
@@ -106,7 +107,8 @@ synctune-frontend/
 
 - **Real-time sync** — queue, seek, playback state sync ทุก client ผ่าน WebSocket
 - **Chat** — real-time chat พร้อม online users list และ chat history
-- **Join flow** — modal ตั้งชื่อก่อนเข้า, reconnect อัตโนมัติด้วย sessionStorage
+- **Multi-room** — สร้างห้องใหม่อัตโนมัติ หรือเข้าห้องที่มีด้วย Room ID 6 หลัก, แสดง badge คลิกคัดลอกได้
+- **Join flow** — modal ตั้งชื่อ + Room ID ก่อนเข้า, reconnect อัตโนมัติด้วย sessionStorage
 - **Seek guard** — ตรวจ drift > 3 วิ ก่อน seek, skip ถ้า serverSeek เกิน duration
 - **User seek cooldown** — ไม่ snap กลับ 5 วินาทีหลัง user drag seek bar
 - **Autoplay / Shuffle / Random** — ควบคุมผ่าน PlaybackControls, state อยู่ที่ server
@@ -122,7 +124,8 @@ synctune-frontend/
 
 - **Store อัปเดตผ่าน WebSocket เท่านั้น** — ห้าม optimistic update
 - **queue_id** — ทุก event ใช้ `queue_id` (UUID) ไม่ใช่ YouTube video ID
-- **join ต้องก่อน event อื่น** — backend ตรวจ NOT_JOINED error ถ้าส่งก่อน join
+- **join ต้องก่อน event อื่น** — backend ตรวจ `NOT_JOINED` error ถ้าส่งก่อน join
+- **room_id** — ตัวเลข 6 หลักเท่านั้น, format ผิด = `INVALID_ROOM_ID` error
 - **YouTube player** — เริ่มต้น mute เสมอ, user กด unmute เอง
 - **Reconnect** — Exponential Backoff: 1s → 2s → 4s → สูงสุด 30s
 

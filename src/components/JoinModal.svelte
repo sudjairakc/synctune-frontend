@@ -6,6 +6,7 @@
   const dispatch = createEventDispatcher()
 
   let username = ''
+  let roomId = ''
   let error = ''
 
   function handleSubmit() {
@@ -18,7 +19,12 @@
       error = 'ชื่อยาวเกินไป (สูงสุด 30 ตัวอักษร)'
       return
     }
-    dispatch('join', { username: name })
+    const room = roomId.trim()
+    if (room && !/^\d{6}$/.test(room)) {
+      error = 'Room ID ต้องเป็นตัวเลข 6 หลัก'
+      return
+    }
+    dispatch('join', { username: name, room_id: room || null })
   }
 
   function handleKeydown(e) {
@@ -42,6 +48,20 @@
         class:error={!!error}
         autofocus
       />
+
+      <div class="room-row">
+        <input
+          type="text"
+          bind:value={roomId}
+          on:keydown={handleKeydown}
+          placeholder="Room ID (6 หลัก) — ว่างไว้ = สร้างห้องใหม่"
+          maxlength="6"
+          class="name-input room-input"
+          class:error={!!error && /Room/.test(error)}
+          inputmode="numeric"
+          pattern="\d*"
+        />
+      </div>
 
       {#if error}
         <p class="error-text">{error}</p>
@@ -109,6 +129,9 @@
   .name-input::placeholder { color: var(--text-muted); }
   .name-input:focus { border-color: var(--accent); }
   .name-input.error { border-color: #ff4444; }
+
+  .room-row { display: flex; gap: 8px; }
+  .room-input { font-size: 14px; letter-spacing: 0.05em; }
 
   .error-text {
     margin: 0;

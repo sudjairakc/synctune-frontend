@@ -1,4 +1,4 @@
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom } from './stores.js'
 import { showToast } from './toast.js'
 
 const MIN_RECONNECT_DELAY = 1000
@@ -14,7 +14,7 @@ export function createWebSocket(url) {
   let reconnectDelay = MIN_RECONNECT_DELAY
   let reconnectTimer = null
   let isManuallyClosed = false
-  let pendingJoin = null  // { username, profile_img } รอส่งหลัง connect
+  let pendingJoin = null  // { username, profile_img, room_id? } รอส่งหลัง connect
   const listeners = {}
 
   function connect() {
@@ -62,7 +62,9 @@ export function createWebSocket(url) {
     const { event, payload } = parsed
 
     switch (event) {
+      case 'room_joined':
       case 'initial_state':
+        if (payload.room_id != null) currentRoom.set(payload.room_id)
         queue.set(payload.current_queue ?? [])
         currentIndex.set(payload.current_index ?? 0)
         seekTime.set(payload.seek_time ?? 0)
@@ -121,6 +123,7 @@ export function createWebSocket(url) {
         const errorMsgMap = {
           NOT_JOINED: 'กรุณาตั้งชื่อก่อนใช้งาน',
           INVALID_USERNAME: 'ชื่อผู้ใช้ไม่ถูกต้อง',
+          INVALID_ROOM_ID: 'Room ID ต้องเป็นตัวเลข 6 หลัก',
           EMPTY_MESSAGE: 'ข้อความว่าง',
           RATE_LIMITED: 'ส่งข้อความบ่อยเกินไป กรุณารอสักครู่',
         }
@@ -162,11 +165,12 @@ export function createWebSocket(url) {
    * join ตั้งค่า pendingJoin แล้วส่งทันทีถ้า connected อยู่แล้ว
    * ถ้ายังไม่ connect จะส่งอัตโนมัติใน onopen
    */
-  function join(username, profile_img = '') {
+  function join(username, profile_img = '', room_id = null) {
     pendingJoin = { username, profile_img }
+    if (room_id) pendingJoin.room_id = room_id
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ event: 'join', payload: pendingJoin }))
-      console.info('[WebSocket] sent join for', username)
+      console.info('[WebSocket] sent join for', username, room_id ? `room ${room_id}` : '(new room)')
     }
   }
 

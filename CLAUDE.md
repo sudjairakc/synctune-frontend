@@ -31,7 +31,7 @@ synctune-frontend/
         ├── History.svelte        ← Playback history + requeue
         ├── PlaybackControls.svelte ← Autoplay / Shuffle / Random toggle
         ├── Chat.svelte           ← Real-time chat + online users
-        └── JoinModal.svelte      ← Modal ตั้งชื่อก่อนเข้าใช้งาน
+        └── JoinModal.svelte      ← Modal ตั้งชื่อ + Room ID ก่อนเข้าใช้งาน
 ```
 
 ---
@@ -56,7 +56,8 @@ npm run build
 - **YouTube IFrame API**: ต้องรอ `onYouTubeIframeAPIReady` ก่อน — `playerContainer` ต้องอยู่ใน DOM เสมอ (ห้ามอยู่ใน `{#if}`)
 - **queue_id**: ทุก event ที่ส่งหา backend (`song_ended`, `skip_song`, `report_error`, `reorder_queue`, `remove_song`) ใช้ `queue_id` ไม่ใช่ YouTube video ID
 - **isPlaying**: ตรวจก่อน loadVideo — ถ้า false ให้ `cueVideoById` แทน `loadVideoById`
-- **join ก่อนเสมอ**: `ws.join()` ต้องถูกเรียกก่อน event อื่นทุกตัว — websocket.js จัดการส่งอัตโนมัติใน `onopen`
+- **join ก่อนเสมอ**: `ws.join(username, profile_img, room_id?)` ต้องถูกเรียกก่อน event อื่นทุกตัว — websocket.js จัดการส่งอัตโนมัติใน `onopen`
+- **room_id**: ตัวเลข 6 หลักเท่านั้น — ไม่ส่งหรือ null = server สร้างห้องใหม่ให้อัตโนมัติ
 - **Error ทุก path ต้องมี UI feedback** — ไม่ silent fail
 
 ---
@@ -67,7 +68,8 @@ npm run build
 
 | Event | Store ที่อัปเดต |
 |---|---|
-| `initial_state` | queue, currentIndex, seekTime, isPlaying, history, autoplay, shuffle, randomPlay, chatHistory, onlineUsers |
+| `room_joined` | currentRoom, queue, currentIndex, seekTime, isPlaying, history, autoplay, shuffle, randomPlay, chatHistory, onlineUsers |
+| `initial_state` | เหมือน `room_joined` (backward-compat) |
 | `queue_updated` | queue, currentIndex, isPlaying, history (ถ้ามี) |
 | `seek_sync` | seekTime, isPlaying |
 | `playback_mode_updated` | autoplay, shuffle, randomPlay (เฉพาะ field ที่ส่งมา — ใช้ `!= null` check) |
@@ -75,13 +77,13 @@ npm run build
 | `user_joined` | onlineUsers + toast notice |
 | `user_left` | onlineUsers |
 | `message_received` | chatHistory (append) |
-| `error` | toast — รองรับ error code: `NOT_JOINED`, `INVALID_USERNAME`, `EMPTY_MESSAGE`, `RATE_LIMITED` |
+| `error` | toast — รองรับ error code: `NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED` |
 
 ### Client → Server
 
 | Event | Payload | หมายเหตุ |
 |---|---|---|
-| `join` | `{ username, profile_img? }` | ส่งทันทีหลัง connect — อัตโนมัติจาก `ws.join()` |
+| `join` | `{ username, profile_img?, room_id? }` | ส่งทันทีหลัง connect — อัตโนมัติจาก `ws.join()` — ไม่ส่ง room_id = สร้างห้องใหม่ |
 | `add_song` | `{ youtube_url, added_by? }` | `added_by` ส่งเฉพาะเมื่อยังไม่ join |
 | `remove_song` | `{ song_id: queue_id }` | |
 | `reorder_queue` | `{ song_id: queue_id, new_index }` | |
@@ -110,6 +112,7 @@ npm run build
 | `currentUser` | `User\|null` | user ของตัวเอง (null ถ้ายังไม่ join) |
 | `onlineUsers` | `User[]` | รายชื่อ user ที่ online |
 | `chatHistory` | `ChatMessage[]` | ประวัติข้อความแชท |
+| `currentRoom` | `string\|null` | room_id ของห้องที่กำลังอยู่ (null ถ้ายังไม่ join) |
 
 ---
 
