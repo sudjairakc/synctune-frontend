@@ -1,0 +1,183 @@
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory } from './stores.js'
+import { showToast } from './toast.js'
+
+const MIN_RECONNECT_DELAY = 1000
+const MAX_RECONNECT_DELAY = 30000
+
+/**
+ * createWebSocket สร้าง WebSocket Client พร้อม Auto-reconnect (Exponential Backoff)
+ * @param {string} url WebSocket URL
+ * @returns {{ send: Function, disconnect: Function, on: Function }}
+ */
+export function createWebSocket(url) {
+  let ws = null
+  let reconnectDelay = MIN_RECONNECT_DELAY
+  let reconnectTimer = null
+  let isManuallyClosed = false
+  let pendingJoin = null  // { username, profile_img } รอส่งหลัง connect
+  const listeners = {}
+
+  function connect() {
+    connectionStatus.set('connecting')
+    console.info('[WebSocket] connecting to', url)
+
+    ws = new WebSocket(url)
+
+    ws.onopen = () => {
+      console.info('[WebSocket] connected')
+      reconnectDelay = MIN_RECONNECT_DELAY
+      connectionStatus.set('connected')
+      // ส่ง join ทันทีถ้ามี pending
+      if (pendingJoin) {
+        ws.send(JSON.stringify({ event: 'join', payload: pendingJoin }))
+        console.info('[WebSocket] sent join for', pendingJoin.username)
+      }
+    }
+
+    ws.onmessage = (event) => {
+      handleMessage(event.data)
+    }
+
+    ws.onclose = () => {
+      if (isManuallyClosed) return
+      console.warn('[WebSocket] disconnected, reconnecting in', reconnectDelay, 'ms')
+      connectionStatus.set('disconnected')
+      scheduleReconnect()
+    }
+
+    ws.onerror = (err) => {
+      console.error('[WebSocket] error:', err)
+    }
+  }
+
+  function handleMessage(raw) {
+    let parsed
+    try {
+      parsed = JSON.parse(raw)
+    } catch (err) {
+      console.error('[WebSocket] failed to parse message:', err)
+      return
+    }
+
+    const { event, payload } = parsed
+
+    switch (event) {
+      case 'initial_state':
+        queue.set(payload.current_queue ?? [])
+        currentIndex.set(payload.current_index ?? 0)
+        seekTime.set(payload.seek_time ?? 0)
+        isPlaying.set(payload.is_playing ?? false)
+        history.set(payload.history ?? [])
+        autoplay.set(payload.autoplay ?? true)
+        shuffle.set(payload.shuffle ?? false)
+        randomPlay.set(payload.random_play ?? false)
+        if (payload.chat_history != null) chatHistory.set(payload.chat_history)
+        if (payload.online_users != null) onlineUsers.set(payload.online_users)
+        break
+
+      case 'playback_mode_updated':
+        if (payload.autoplay != null) autoplay.set(payload.autoplay)
+        if (payload.shuffle != null) shuffle.set(payload.shuffle)
+        if (payload.random_play != null) randomPlay.set(payload.random_play)
+        break
+
+      case 'queue_updated':
+        queue.set(payload.current_queue ?? [])
+        currentIndex.set(payload.current_index ?? 0)
+        isPlaying.set(payload.is_playing ?? false)
+        if (payload.history != null) history.set(payload.history)
+        break
+
+      case 'seek_sync':
+        seekTime.set(payload.seek_time ?? 0)
+        isPlaying.set(payload.is_playing ?? false)
+        break
+
+      case 'song_skipped': {
+        const reasonMap = {
+          user_skipped: 'ข้ามโดยผู้ใช้',
+          embed_not_allowed: 'เล่นไม่ได้ (embed ถูกปิด)',
+          embed_not_allowed_by_request: 'เล่นไม่ได้ (เจ้าของปิด embed)',
+        }
+        const reason = reasonMap[payload.reason] ?? `Error ${payload.error_code ?? payload.reason}`
+        showToast(`ข้ามเพลง: ${payload.title || payload.song_id} — ${reason}`, 'warning')
+        break
+      }
+
+      case 'user_joined':
+        onlineUsers.set(payload.online_users ?? [])
+        showToast(`${payload.user.username} เข้าร่วม`, 'info')
+        break
+
+      case 'user_left':
+        onlineUsers.set(payload.online_users ?? [])
+        break
+
+      case 'message_received':
+        chatHistory.update((msgs) => [...msgs, payload])
+        break
+
+      case 'error': {
+        const errorMsgMap = {
+          NOT_JOINED: 'กรุณาตั้งชื่อก่อนใช้งาน',
+          INVALID_USERNAME: 'ชื่อผู้ใช้ไม่ถูกต้อง',
+          EMPTY_MESSAGE: 'ข้อความว่าง',
+          RATE_LIMITED: 'ส่งข้อความบ่อยเกินไป กรุณารอสักครู่',
+        }
+        showToast(errorMsgMap[payload.code] || payload.message || 'เกิดข้อผิดพลาด', 'error')
+        break
+      }
+
+      default:
+        console.warn('[WebSocket] unknown event:', event)
+    }
+
+    if (listeners[event]) {
+      listeners[event].forEach((fn) => fn(payload))
+    }
+  }
+
+  function scheduleReconnect() {
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(() => {
+      reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY)
+      connect()
+    }, reconnectDelay)
+  }
+
+  function on(event, fn) {
+    if (!listeners[event]) listeners[event] = []
+    listeners[event].push(fn)
+  }
+
+  function send(event, payload) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.error('[WebSocket] cannot send, not connected')
+      throw new Error('WebSocket not connected')
+    }
+    ws.send(JSON.stringify({ event, payload }))
+  }
+
+  /**
+   * join ตั้งค่า pendingJoin แล้วส่งทันทีถ้า connected อยู่แล้ว
+   * ถ้ายังไม่ connect จะส่งอัตโนมัติใน onopen
+   */
+  function join(username, profile_img = '') {
+    pendingJoin = { username, profile_img }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ event: 'join', payload: pendingJoin }))
+      console.info('[WebSocket] sent join for', username)
+    }
+  }
+
+  function disconnect() {
+    isManuallyClosed = true
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    if (ws) ws.close()
+    connectionStatus.set('disconnected')
+  }
+
+  connect()
+
+  return { on, send, join, disconnect }
+}
