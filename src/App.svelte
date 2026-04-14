@@ -119,6 +119,13 @@
     </div>
   </main>
 
+  <footer class="app-footer">
+    <span>Made with ❤️ by</span>
+    <a href="https://github.com/sudjairakc" target="_blank" rel="noopener noreferrer">sudjairakc</a>
+    <!-- <span>·</span>
+    <a href="https://sudjairakc.github.io/portfolio/" target="_blank" rel="noopener noreferrer">Portfolio</a> -->
+  </footer>
+
   <div class="toast-container">
     {#each $toasts as toast (toast.id)}
       <div class="toast toast-{toast.type}" role="alert">
@@ -354,6 +361,29 @@
   }
 
   .history-section { flex-shrink: 0; }
+
+  .app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 24px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+  }
+
+  .app-footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .app-footer a:hover {
+    color: var(--accent);
+  }
 
   .toast-container {
     position: fixed;
