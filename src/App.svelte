@@ -121,7 +121,8 @@
 
   <footer class="app-footer">
     <span>Made with ❤️ by</span>
-    <a href="https://github.com/sudjairakc" target="_blank" rel="noopener noreferrer">sudjairakc</a>
+    <a href="" target="_blank" rel="noopener noreferrer">sudjairakc</a>
+    <!-- <a href="https://github.com/sudjairakc" target="_blank" rel="noopener noreferrer">sudjairakc</a> -->
     <!-- <span>·</span>
     <a href="https://sudjairakc.github.io/portfolio/" target="_blank" rel="noopener noreferrer">Portfolio</a> -->
   </footer>
