@@ -13,6 +13,7 @@
   let currentQueueId = null
   let needsResume = false
   let userSeekedAt = 0
+  let isUserPaused = false
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -88,8 +89,13 @@
         }
       }
     }
-    if (event.data === 2 || event.data === 3) {
-      // PAUSED หรือ BUFFERING — เกิดเมื่อ user drag seek bar หรือกด pause
+    if (event.data === 2) {
+      // PAUSED — user กด pause จริงๆ → block seek_sync ตลอดจนกว่าจะ play ใหม่
+      isUserPaused = true
+      userSeekedAt = Date.now()
+    }
+    if (event.data === 3) {
+      // BUFFERING — user drag seek bar → cooldown ชั่วคราวเท่านั้น ไม่ set isUserPaused
       userSeekedAt = Date.now()
     }
     if (event.data === 5 && $isPlaying) {
@@ -98,6 +104,7 @@
     }
     if (event.data === 1) {
       needsResume = false
+      isUserPaused = false
     }
   }
 
@@ -131,7 +138,9 @@
 
   function syncSeekIfNeeded(serverSeek) {
     if (!player || !isPlayerReady) return
-    // ถ้า user เพิ่ง seek เองใน cooldown window → ignore
+    // ถ้า user กด pause อยู่ → ignore seek_sync ทั้งหมด
+    if (isUserPaused) return
+    // ถ้า user เพิ่ง drag seek bar ใน cooldown window → ignore
     if (userSeekedAt && Date.now() - userSeekedAt < USER_SEEK_COOLDOWN) return
     try {
       const duration = player.getDuration()
