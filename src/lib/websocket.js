@@ -1,5 +1,7 @@
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom } from './stores.js'
+import { get } from 'svelte/store'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser } from './stores.js'
 import { showToast } from './toast.js'
+import { playUserJoined, playChatMessage } from './sound.js'
 
 const MIN_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
@@ -109,15 +111,22 @@ export function createWebSocket(url) {
       case 'user_joined':
         onlineUsers.set(payload.online_users ?? [])
         showToast(`${payload.user.username} เข้าร่วม`, 'info')
+        playUserJoined()
         break
 
       case 'user_left':
         onlineUsers.set(payload.online_users ?? [])
         break
 
-      case 'message_received':
+      case 'message_received': {
         chatHistory.update((msgs) => [...msgs, payload])
+        // เล่นเสียงเฉพาะข้อความจากคนอื่น
+        const me = get(currentUser)
+        if (!me || payload.user.id !== me.id) {
+          playChatMessage()
+        }
         break
+      }
 
       case 'error': {
         const errorMsgMap = {

@@ -1,4 +1,5 @@
 import { toasts } from './stores.js'
+import { playNotification } from './sound.js'
 
 let nextId = 0
 const DEFAULT_DURATION = 4000
@@ -12,6 +13,7 @@ const DEFAULT_DURATION = 4000
 export function showToast(message, type = 'info', duration = DEFAULT_DURATION) {
   const id = ++nextId
   toasts.update((list) => [...list, { id, message, type }])
+  playNotification(type)
   setTimeout(() => dismissToast(id), duration)
 }
 

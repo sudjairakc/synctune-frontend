@@ -1,8 +1,34 @@
 <script>
   import { onDestroy, onMount } from 'svelte'
   import { createWebSocket } from '$lib/websocket.js'
-  import { connectionStatus, toasts, currentUser, currentRoom } from '$lib/stores.js'
+  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers } from '$lib/stores.js'
   import { dismissToast } from '$lib/toast.js'
+  import { isSoundEnabled, setSoundEnabled } from '$lib/sound.js'
+
+  let soundEnabled = isSoundEnabled()
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled
+    setSoundEnabled(soundEnabled)
+  }
+
+  function handleLeaveRoom() {
+    // reset stores กลับค่าเริ่มต้น
+    currentUser.set(null)
+    currentRoom.set(null)
+    queue.set([])
+    currentIndex.set(0)
+    seekTime.set(0)
+    isPlaying.set(false)
+    history.set([])
+    chatHistory.set([])
+    onlineUsers.set([])
+    // ล้าง session
+    sessionStorage.removeItem('username')
+    sessionStorage.removeItem('room_id')
+    // แสดง JoinModal
+    showJoinModal = true
+  }
   import Player from './components/Player.svelte'
   import Queue from './components/Queue.svelte'
   import AddSong from './components/AddSong.svelte'
@@ -97,9 +123,17 @@
           ขาดการเชื่อมต่อ
         {/if}
       </div>
+      <button class="icon-btn" on:click={toggleSound} title={soundEnabled ? 'ปิดเสียง' : 'เปิดเสียง'} aria-label="toggle sound">
+        {soundEnabled ? '🔔' : '🔕'}
+      </button>
       <button class="theme-toggle" on:click={toggleTheme} title="สลับธีม" aria-label="สลับ light/dark mode" data-tutorial="theme">
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
+      {#if $currentUser}
+        <button class="leave-btn" on:click={handleLeaveRoom} title="ออกจากห้อง">
+          ออกห้อง
+        </button>
+      {/if}
     </div>
   </header>
 
@@ -314,7 +348,8 @@
     flex-shrink: 0;
   }
 
-  .theme-toggle {
+  .theme-toggle,
+  .icon-btn {
     background: none;
     border: 1px solid var(--border);
     border-radius: 50%;
@@ -329,9 +364,30 @@
     flex-shrink: 0;
   }
 
-  .theme-toggle:hover {
+  .theme-toggle:hover,
+  .icon-btn:hover {
     border-color: var(--accent);
     background: var(--accent-soft);
+  }
+
+  .leave-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .leave-btn:hover {
+    border-color: #ff4444;
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.08);
   }
 
   .app-main {
