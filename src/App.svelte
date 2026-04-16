@@ -13,7 +13,9 @@
   }
 
   function handleLeaveRoom() {
-    // reset stores กลับค่าเริ่มต้น
+    // ตัด WS แล้ว reconnect ใหม่สะอาด (ไม่มี pendingJoin)
+    ws.leave()
+    // reset stores
     currentUser.set(null)
     currentRoom.set(null)
     queue.set([])
@@ -26,7 +28,6 @@
     // ล้าง session
     sessionStorage.removeItem('username')
     sessionStorage.removeItem('room_id')
-    // แสดง JoinModal
     showJoinModal = true
   }
   import Player from './components/Player.svelte'

@@ -190,7 +190,22 @@ export function createWebSocket(url) {
     connectionStatus.set('disconnected')
   }
 
+  /**
+   * leave ออกจากห้อง: ตัด connection เดิม แล้ว reconnect ใหม่สะอาด
+   * pendingJoin จะถูก clear — เรียก join() หลังจากนี้เพื่อส่ง join ใหม่
+   */
+  function leave() {
+    pendingJoin = null
+    isManuallyClosed = false
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    if (ws) {
+      ws.onclose = null  // ป้องกัน scheduleReconnect อัตโนมัติ
+      ws.close()
+    }
+    connect()
+  }
+
   connect()
 
-  return { on, send, join, disconnect }
+  return { on, send, join, disconnect, leave }
 }
