@@ -82,8 +82,10 @@
     if (event.data === 0) {
       console.info('[Player] video ended, queue_id:', currentQueueId)
       if (currentQueueId && ws) {
+        const endedId = currentQueueId
+        currentQueueId = null  // clear ก่อนส่ง ป้องกัน ENDED ยิงซ้ำ
         try {
-          ws.send('song_ended', { song_id: currentQueueId })
+          ws.send('song_ended', { song_id: endedId })
         } catch (err) {
           console.error('[Player] failed to send song_ended:', err)
         }
