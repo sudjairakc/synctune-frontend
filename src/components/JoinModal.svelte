@@ -12,16 +12,16 @@
   function handleSubmit() {
     const name = username.trim()
     if (!name) {
-      error = 'กรุณาใส่ชื่อ'
+      error = 'Please enter a name'
       return
     }
     if (name.length > 30) {
-      error = 'ชื่อยาวเกินไป (สูงสุด 30 ตัวอักษร)'
+      error = 'Name is too long (max 30 characters)'
       return
     }
     const room = roomId.trim()
     if (room && !/^\d{6}$/.test(room)) {
-      error = 'Room ID ต้องเป็นตัวเลข 6 หลัก'
+      error = 'Room ID must be a 6-digit number'
       return
     }
     dispatch('join', { username: name, room_id: room || null })
@@ -35,14 +35,14 @@
 {#if visible}
   <div class="overlay">
     <div class="modal">
-      <h2 class="modal-title">ยินดีต้อนรับสู่ SyncTune</h2>
-      <p class="modal-sub">ใส่ชื่อของคุณเพื่อเข้าร่วม</p>
+      <h2 class="modal-title">Welcome to SyncTune</h2>
+      <p class="modal-sub">Enter your name to join</p>
 
       <input
         type="text"
         bind:value={username}
         on:keydown={handleKeydown}
-        placeholder="ชื่อของคุณ"
+        placeholder="Your name"
         maxlength="30"
         class="name-input"
         class:error={!!error}
@@ -54,7 +54,7 @@
           type="text"
           bind:value={roomId}
           on:keydown={handleKeydown}
-          placeholder="Room ID (6 หลัก) — ว่างไว้ = สร้างห้องใหม่"
+          placeholder="Room ID (6 digits) — leave blank to create a new room"
           maxlength="6"
           class="name-input room-input"
           class:error={!!error && /Room/.test(error)}
@@ -68,7 +68,7 @@
       {/if}
 
       <button class="join-btn" on:click={handleSubmit} disabled={!username.trim()}>
-        เข้าร่วม
+        Join
       </button>
     </div>
   </div>

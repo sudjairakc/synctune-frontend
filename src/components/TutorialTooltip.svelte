@@ -7,50 +7,50 @@
   const steps = [
     {
       id: 'room',
-      title: 'ห้องของคุณ 🏠',
-      body: 'Room ID ที่มุมบนซ้าย — แชร์ให้เพื่อนกดคัดลอก แล้วเพื่อนนำไปใส่ใน "Room ID" ตอน Join เพื่อเข้าห้องเดียวกัน',
+      title: 'Your Room 🏠',
+      body: 'Your Room ID is shown top-left — share it with friends so they can paste it into the "Room ID" field when joining to enter the same room.',
       anchor: 'room-badge',
       placement: 'bottom-start',
     },
     {
       id: 'add-song',
-      title: 'เพิ่มเพลง 🎵',
-      body: 'วาง YouTube URL แล้วกด "เพิ่ม" — รองรับทั้ง youtube.com/watch?v=... และ youtu.be/...',
+      title: 'Add a Song 🎵',
+      body: 'Paste a YouTube URL and press "Add" — supports both youtube.com/watch?v=... and youtu.be/... formats.',
       anchor: 'add-song',
       placement: 'top',
     },
     {
       id: 'queue',
-      title: 'คิวเพลง 📋',
-      body: 'ลากเพื่อเรียงลำดับได้ กด ✕ เพื่อลบ — ทุกคนในห้องเห็นคิวเดียวกัน',
+      title: 'Song Queue 📋',
+      body: 'Drag to reorder. Press ✕ to remove — everyone in the room sees the same queue.',
       anchor: 'queue-section',
       placement: 'left',
     },
     {
       id: 'controls',
-      title: 'โหมดเล่น 🔀',
-      body: '"เล่นต่อ" = เล่นเพลงถัดไปอัตโนมัติ · "สลับคิว" = สับเรียงทั้งคิว · "สุ่มเพลง" = สุ่มเลือกโดยไม่เปลี่ยนลำดับ',
+      title: 'Playback Modes 🔀',
+      body: '"Autoplay" = play next song automatically · "Shuffle" = randomize the queue order · "Random" = pick randomly without changing the order.',
       anchor: 'playback-controls',
       placement: 'top',
     },
     {
       id: 'chat',
-      title: 'แชทสด 💬',
-      body: 'คุยกับทุกคนในห้องได้แบบ real-time พร้อมดูว่ามีใคร online บ้าง',
+      title: 'Live Chat 💬',
+      body: 'Chat with everyone in the room in real-time. See who is currently online.',
       anchor: 'chat-section',
       placement: 'top',
     },
     {
       id: 'history',
-      title: 'ประวัติเพลง ⏪',
-      body: 'กด + ในประวัติเพื่อนำเพลงกลับเข้าคิวได้ทันที',
+      title: 'Play History ⏪',
+      body: 'Press + in history to re-add any song back to the queue instantly.',
       anchor: 'history-section',
       placement: 'left',
     },
     {
       id: 'theme',
-      title: 'ธีม ☀️ / 🌙',
-      body: 'สลับ Dark/Light ได้ที่ปุ่มมุมบนขวา — ระบบจำการเลือกของคุณไว้',
+      title: 'Theme ☀️ / 🌙',
+      body: 'Toggle Dark/Light mode with the button in the top-right corner — your preference is saved.',
       anchor: 'theme-toggle',
       placement: 'bottom-end',
     },
@@ -168,11 +168,11 @@
     bind:this={tooltipEl}
     style={tooltipStyle(anchorRect, step.placement)}
     role="dialog"
-    aria-label="คู่มือการใช้งาน"
+    aria-label="Tutorial guide"
   >
     <div class="tooltip-header">
       <span class="step-count">{stepIndex + 1} / {steps.length}</span>
-      <button class="close-btn" on:click={done} aria-label="ปิด">✕</button>
+      <button class="close-btn" on:click={done} aria-label="Close">✕</button>
     </div>
 
     <h4 class="tooltip-title">{step.title}</h4>
@@ -185,16 +185,16 @@
             class="dot"
             class:active={i === stepIndex}
             on:click={() => { stepIndex = i; scrollToAnchor() }}
-            aria-label="ขั้นตอนที่ {i + 1}"
+            aria-label="Step {i + 1}"
           ></button>
         {/each}
       </div>
       <div class="nav-btns">
         {#if stepIndex > 0}
-          <button class="nav-btn secondary" on:click={prev}>← ก่อนหน้า</button>
+          <button class="nav-btn secondary" on:click={prev}>← Back</button>
         {/if}
         <button class="nav-btn primary" on:click={next}>
-          {isLast ? 'เริ่มใช้งาน ✓' : 'ถัดไป →'}
+          {isLast ? 'Get Started ✓' : 'Next →'}
         </button>
       </div>
     </div>

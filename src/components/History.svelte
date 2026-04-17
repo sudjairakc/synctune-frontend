@@ -29,10 +29,10 @@
 </script>
 
 <div class="history">
-  <h3>เพลงที่เล่นไปแล้ว</h3>
+  <h3>Play History</h3>
 
   {#if displayHistory.length === 0}
-    <p class="empty">ยังไม่มีเพลงที่เล่นผ่านมา</p>
+    <p class="empty">No songs played yet</p>
   {:else}
     <ul class="history-list">
       {#each displayHistory as song, i (song.id + song.status + i)}
@@ -47,13 +47,13 @@
             </span>
           </div>
           <span class="status-badge" class:skipped={song.status === 'skipped'}>
-            {song.status === 'skipped' ? 'ข้าม' : 'เล่นแล้ว'}
+            {song.status === 'skipped' ? 'Skipped' : 'Played'}
           </span>
           <button
             class="requeue-btn"
             on:click={() => handleRequeue(song)}
-            title="เพิ่มลงคิวอีกครั้ง"
-            aria-label="เพิ่ม {song.title || song.id} ลงคิว"
+            title="Add to queue again"
+            aria-label="Add {song.title || song.id} to queue"
           >+</button>
         </li>
       {/each}

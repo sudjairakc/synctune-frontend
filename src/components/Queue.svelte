@@ -72,10 +72,10 @@
 </script>
 
 <div class="queue">
-  <h3>คิวเพลง ({$queue.length} เพลง)</h3>
+  <h3>Queue ({$queue.length} {$queue.length === 1 ? 'song' : 'songs'})</h3>
 
   {#if $queue.length === 0}
-    <p class="empty">ยังไม่มีเพลงในคิว เพิ่มเพลงเพื่อเริ่มเล่น</p>
+    <p class="empty">Queue is empty. Add a song to start playing</p>
   {:else}
     <ul class="song-list">
       {#each $queue as song, i (song.queue_id ?? song.id + '_' + i)}
@@ -98,17 +98,17 @@
           <div class="song-info">
             <span class="song-title">{song.title || song.id}</span>
             <span class="song-meta">
-              โดย {song.added_by} · {formatDuration(song.duration)}
+              by {song.added_by} · {formatDuration(song.duration)}
             </span>
           </div>
 
           {#if i === $currentIndex}
-            <span class="now-playing-badge">กำลังเล่น</span>
+            <span class="now-playing-badge">Now Playing</span>
           {:else}
             <button
               class="remove-btn"
               on:click={() => handleRemove(song.queue_id)}
-              aria-label="ลบเพลง {song.title || song.id}"
+              aria-label="Remove {song.title || song.id}"
             >
               ✕
             </button>

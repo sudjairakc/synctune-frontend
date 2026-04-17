@@ -16,17 +16,17 @@
     errorMessage = ''
 
     if (!youtubeUrl.trim()) {
-      errorMessage = 'กรุณาใส่ YouTube URL'
+      errorMessage = 'Please enter a YouTube URL'
       return
     }
 
     if (!isValidYouTubeURL(youtubeUrl.trim())) {
-      errorMessage = 'URL ไม่ถูกต้อง กรุณาใช้ YouTube URL'
+      errorMessage = 'Invalid URL. Please use a YouTube URL'
       return
     }
 
     if (!ws) {
-      errorMessage = 'ไม่ได้เชื่อมต่อ กรุณารอสักครู่'
+      errorMessage = 'Not connected. Please wait a moment'
       return
     }
 
@@ -39,7 +39,7 @@
       errorMessage = ''
     } catch (err) {
       console.error('[AddSong] send failed:', err)
-      errorMessage = 'ไม่สามารถส่งคำขอได้ กรุณาลองใหม่'
+      errorMessage = 'Failed to send request. Please try again'
     } finally {
       isSubmitting = false
     }
@@ -55,14 +55,14 @@
 </script>
 
 <div class="add-song">
-  <h3>เพิ่มเพลง</h3>
+  <h3>Add Song</h3>
 
   <div class="input-row">
     <input
       type="text"
       bind:value={youtubeUrl}
       on:keydown={handleKeydown}
-      placeholder="YouTube URL (youtube.com/watch?v=... หรือ youtu.be/...)"
+      placeholder="YouTube URL (youtube.com/watch?v=... or youtu.be/...)"
       class="url-input"
       class:error={errorMessage}
       disabled={isSubmitting}
@@ -72,7 +72,7 @@
         type="text"
         bind:value={addedBy}
         on:keydown={handleKeydown}
-        placeholder="ชื่อผู้เพิ่ม (optional)"
+        placeholder="Added by (optional)"
         class="name-input"
         maxlength="30"
         disabled={isSubmitting}
@@ -83,7 +83,7 @@
       disabled={isSubmitting || !youtubeUrl.trim()}
       class="add-btn"
     >
-      {isSubmitting ? 'กำลังเพิ่ม...' : 'เพิ่ม'}
+      {isSubmitting ? 'Adding...' : 'Add'}
     </button>
   </div>
 

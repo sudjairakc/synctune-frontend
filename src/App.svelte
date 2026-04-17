@@ -38,6 +38,15 @@
   import Chat from './components/Chat.svelte'
   import JoinModal from './components/JoinModal.svelte'
   import TutorialTooltip from './components/TutorialTooltip.svelte'
+  import LegalModal from './components/LegalModal.svelte'
+
+  let legalOpen = false;
+  let legalTab = 'terms';
+
+  function openLegal(tab) {
+    legalTab = tab;
+    legalOpen = true;
+  }
 
   const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'
   const APP_TITLE = import.meta.env.VITE_APP_TITLE || 'SyncTune'
@@ -99,7 +108,7 @@
       {#if $currentRoom}
         <button
           class="room-badge"
-          title="คลิกเพื่อคัดลอก Room ID"
+          title="Click to copy Room ID"
           on:click={() => navigator.clipboard.writeText($currentRoom)}
           data-tutorial="room"
         >
@@ -117,22 +126,22 @@
       <div class="connection-status" class:connected={$connectionStatus === 'connected'} class:disconnected={$connectionStatus === 'disconnected'}>
         <span class="status-dot"></span>
         {#if $connectionStatus === 'connected'}
-          เชื่อมต่อแล้ว
+          Connected
         {:else if $connectionStatus === 'connecting'}
-          กำลังเชื่อมต่อ...
+          Connecting...
         {:else}
-          ขาดการเชื่อมต่อ
+          Disconnected
         {/if}
       </div>
-      <button class="icon-btn" on:click={toggleSound} title={soundEnabled ? 'ปิดเสียง' : 'เปิดเสียง'} aria-label="toggle sound">
+      <button class="icon-btn" on:click={toggleSound} title={soundEnabled ? 'Mute' : 'Unmute'} aria-label="toggle sound">
         {soundEnabled ? '🔔' : '🔕'}
       </button>
-      <button class="theme-toggle" on:click={toggleTheme} title="สลับธีม" aria-label="สลับ light/dark mode" data-tutorial="theme">
+      <button class="theme-toggle" on:click={toggleTheme} title="Toggle theme" aria-label="Toggle light/dark mode" data-tutorial="theme">
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
       {#if $currentUser}
-        <button class="leave-btn" on:click={handleLeaveRoom} title="ออกจากห้อง">
-          ออกห้อง
+        <button class="leave-btn" on:click={handleLeaveRoom} title="Leave room">
+          Leave
         </button>
       {/if}
     </div>
@@ -157,10 +166,15 @@
   <footer class="app-footer">
     <span>Made with ❤️ by</span>
     <a href="" target="_blank" rel="noopener noreferrer">sudjairakc</a>
-    <!-- <a href="https://github.com/sudjairakc" target="_blank" rel="noopener noreferrer">sudjairakc</a> -->
-    <!-- <span>·</span>
-    <a href="https://sudjairakc.github.io/portfolio/" target="_blank" rel="noopener noreferrer">Portfolio</a> -->
+    <span>·</span>
+    <button class="footer-link" on:click={() => openLegal('terms')}>Terms of Service</button>
+    <span>·</span>
+    <button class="footer-link" on:click={() => openLegal('privacy')}>Privacy Policy</button>
+    <span>·</span>
+    <a href="mailto:sudjairak.c@gmail.com">Contact</a>
   </footer>
+
+  <LegalModal bind:open={legalOpen} bind:tab={legalTab} />
 
   <div class="toast-container">
     {#each $toasts as toast (toast.id)}
@@ -433,13 +447,21 @@
     flex-shrink: 0;
   }
 
-  .app-footer a {
+  .app-footer a, .footer-link {
     color: var(--text-secondary);
     text-decoration: none;
     transition: color 0.15s;
   }
 
-  .app-footer a:hover {
+  .footer-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    cursor: pointer;
+  }
+
+  .app-footer a:hover, .footer-link:hover {
     color: var(--accent);
   }
 

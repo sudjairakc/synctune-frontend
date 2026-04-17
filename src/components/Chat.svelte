@@ -54,10 +54,10 @@
 
 <div class="chat">
   <div class="chat-header">
-    <span class="chat-title">แชท</span>
-    <div class="online-count" title="ผู้ใช้ออนไลน์">
+    <span class="chat-title">Chat</span>
+    <div class="online-count" title="Online users">
       <span class="online-dot"></span>
-      {$onlineUsers.length} คน
+      {$onlineUsers.length} online
     </div>
   </div>
 
@@ -79,7 +79,7 @@
   <!-- Messages -->
   <div class="message-list" bind:this={listEl} on:scroll={handleScroll}>
     {#if $chatHistory.length === 0}
-      <p class="empty">ยังไม่มีข้อความ</p>
+      <p class="empty">No messages yet</p>
     {:else}
       {#each $chatHistory as msg (msg.id)}
         <div class="message" class:own={isOwnMessage(msg)}>
@@ -109,13 +109,13 @@
     <textarea
       bind:value={messageText}
       on:keydown={handleKeydown}
-      placeholder="พิมพ์ข้อความ..."
+      placeholder="Type a message..."
       maxlength={MAX_LENGTH}
       rows="1"
       class="chat-input"
       class:warn={charsLeft < 50}
     ></textarea>
-    <button class="send-btn" on:click={handleSend} disabled={!messageText.trim()} title="ส่ง (Enter)">
+    <button class="send-btn" on:click={handleSend} disabled={!messageText.trim()} title="Send (Enter)">
       ➤
     </button>
   </div>

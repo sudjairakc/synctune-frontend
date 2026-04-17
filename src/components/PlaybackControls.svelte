@@ -36,11 +36,11 @@
     class="ctrl-btn"
     class:active={$autoplay}
     on:click={toggleAutoplay}
-    title="เล่นอัตโนมัติ"
+    title="Autoplay"
     aria-pressed={$autoplay}
   >
     <span class="icon">↻</span>
-    <span class="label">เล่นต่อ</span>
+    <span class="label">Autoplay</span>
   </button>
 
   <button
@@ -49,11 +49,11 @@
     class:disabled={$randomPlay}
     on:click={toggleShuffle}
     disabled={$randomPlay}
-    title={$randomPlay ? 'ปิด Random ก่อนใช้ Shuffle' : 'สลับลำดับคิว'}
+    title={$randomPlay ? 'Disable Random before using Shuffle' : 'Shuffle queue order'}
     aria-pressed={$shuffle}
   >
     <span class="icon">⇄</span>
-    <span class="label">สลับคิว</span>
+    <span class="label">Shuffle</span>
   </button>
 
   <button
@@ -62,11 +62,11 @@
     class:disabled={$shuffle}
     on:click={toggleRandom}
     disabled={$shuffle}
-    title={$shuffle ? 'ปิด Shuffle ก่อนใช้ Random' : 'สุ่มเพลง'}
+    title={$shuffle ? 'Disable Shuffle before using Random' : 'Random pick'}
     aria-pressed={$randomPlay}
   >
     <span class="icon">⚄</span>
-    <span class="label">สุ่มเพลง</span>
+    <span class="label">Random</span>
   </button>
 </div>
 

@@ -99,18 +99,18 @@ export function createWebSocket(url) {
 
       case 'song_skipped': {
         const reasonMap = {
-          user_skipped: 'ข้ามโดยผู้ใช้',
-          embed_not_allowed: 'เล่นไม่ได้ (embed ถูกปิด)',
-          embed_not_allowed_by_request: 'เล่นไม่ได้ (เจ้าของปิด embed)',
+          user_skipped: 'Skipped by user',
+          embed_not_allowed: 'Cannot play (embedding disabled)',
+          embed_not_allowed_by_request: 'Cannot play (owner disabled embedding)',
         }
         const reason = reasonMap[payload.reason] ?? `Error ${payload.error_code ?? payload.reason}`
-        showToast(`ข้ามเพลง: ${payload.title || payload.song_id} — ${reason}`, 'warning')
+        showToast(`Skipped: ${payload.title || payload.song_id} — ${reason}`, 'warning')
         break
       }
 
       case 'user_joined':
         onlineUsers.set(payload.online_users ?? [])
-        showToast(`${payload.user.username} เข้าร่วม`, 'info')
+        showToast(`${payload.user.username} joined`, 'info')
         playUserJoined()
         break
 
@@ -130,13 +130,13 @@ export function createWebSocket(url) {
 
       case 'error': {
         const errorMsgMap = {
-          NOT_JOINED: 'กรุณาตั้งชื่อก่อนใช้งาน',
-          INVALID_USERNAME: 'ชื่อผู้ใช้ไม่ถูกต้อง',
-          INVALID_ROOM_ID: 'Room ID ต้องเป็นตัวเลข 6 หลัก',
-          EMPTY_MESSAGE: 'ข้อความว่าง',
-          RATE_LIMITED: 'ส่งข้อความบ่อยเกินไป กรุณารอสักครู่',
+          NOT_JOINED: 'Please set a name before using the app',
+          INVALID_USERNAME: 'Invalid username',
+          INVALID_ROOM_ID: 'Room ID must be a 6-digit number',
+          EMPTY_MESSAGE: 'Message is empty',
+          RATE_LIMITED: 'Sending too fast. Please wait a moment',
         }
-        showToast(errorMsgMap[payload.code] || payload.message || 'เกิดข้อผิดพลาด', 'error')
+        showToast(errorMsgMap[payload.code] || payload.message || 'An error occurred', 'error')
         break
       }
 

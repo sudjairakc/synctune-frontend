@@ -184,14 +184,14 @@
     {#if needsResume}
       <button class="resume-overlay" on:click={handleResumeClick}>
         <span class="resume-icon">▶</span>
-        <span class="resume-text">แตะเพื่อเล่น</span>
+        <span class="resume-text">Tap to play</span>
       </button>
     {/if}
   </div>
 
   {#if $queue.length === 0}
     <div class="player-placeholder">
-      <p>เพิ่มเพลงเพื่อเริ่มเล่น</p>
+      <p>Add a song to start playing</p>
     </div>
   {:else if currentSong}
     <div class="now-playing-info">
@@ -199,11 +199,11 @@
         <img class="now-playing-thumb" src={currentSong.thumbnail} alt="" aria-hidden="true" />
       {/if}
       <div class="now-playing-text">
-        <span class="label">กำลังเล่น</span>
+        <span class="label">Now Playing</span>
         <span class="title">{currentSong.title || currentSong.id}</span>
-        <span class="added-by">เพิ่มโดย {currentSong.added_by}</span>
+        <span class="added-by">Added by {currentSong.added_by}</span>
       </div>
-      <button class="skip-btn" on:click={handleSkip} title="ข้ามเพลง">⏭</button>
+      <button class="skip-btn" on:click={handleSkip} title="Skip song">⏭</button>
     </div>
   {/if}
 </div>
