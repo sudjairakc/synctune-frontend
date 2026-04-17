@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://synctune-frontend.vercel.app/sitemap.xml
