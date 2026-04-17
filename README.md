@@ -1,19 +1,18 @@
 # SyncTune Frontend
 
-Svelte frontend สำหรับ SyncTune — Real-time Office Jukebox
+> ⚠️ **Experimental project** — built for personal learning and exploration. Not intended for commercial use.
 
-**Stack:** Svelte · Vite · YouTube IFrame API · Vitest
+A Svelte frontend for SyncTune — a real-time collaborative music listening app. Create a room, add YouTube videos to a shared queue, and listen in sync with friends. No account required.
 
----
+**Live:** https://synctune-frontend.vercel.app
 
-## Prerequisites
-
-- Node.js 20+
-- Backend รันอยู่ที่ `localhost:8080` (ดู [synctune-backend](../synctune-backend/README.md))
+**Stack:** Svelte · Vite · YouTube IFrame API · WebSocket · Vitest
 
 ---
 
-## เริ่มต้นใช้งาน
+## Getting Started
+
+**Prerequisites:** Node.js 20+ and the [synctune-backend](../synctune-backend/README.md) running at `localhost:8080`
 
 ```bash
 npm install
@@ -23,13 +22,13 @@ npm run dev          # http://localhost:5173
 
 ---
 
-## คำสั่งที่ใช้บ่อย
+## Commands
 
 ```bash
-npm run dev          # Dev server (hot reload)
-npm run build        # Build สำหรับ Production
-npm run preview      # Preview Production build
-npm run test         # รัน Tests
+npm run dev          # Dev server with hot reload
+npm run build        # Production build
+npm run preview      # Preview production build locally
+npm run test         # Run Vitest tests
 npm run test:watch   # Watch mode
 npm run lint
 ```
@@ -38,34 +37,41 @@ npm run lint
 
 ## Environment Variables
 
-| Variable | Default | คำอธิบาย |
+| Variable | Default | Description |
 |---|---|---|
-| `VITE_WS_URL` | `ws://localhost:8080/ws` | WebSocket URL ของ Backend |
-| `VITE_APP_TITLE` | `SyncTune` | ชื่อแอปที่แสดงใน Header |
+| `VITE_WS_URL` | `ws://localhost:8080/ws` | Backend WebSocket URL |
+| `VITE_APP_TITLE` | `SyncTune` | App title shown in the header |
 
 ---
 
-## โครงสร้างโปรเจ็กต์
+## Project Structure
 
 ```
 synctune-frontend/
 ├── index.html
 ├── vite.config.js
+├── public/
+│   ├── og-image.png
+│   ├── robots.txt
+│   └── sitemap.xml
 └── src/
     ├── main.js                       ← Entry point
-    ├── App.svelte                    ← Root component + Layout + Theme + Toast + Join flow
+    ├── App.svelte                    ← Root component · layout · theme · toast · join flow
     ├── lib/
-    │   ├── websocket.js              ← WS client + exponential backoff + join()
+    │   ├── websocket.js              ← WS client · exponential backoff · join()
     │   ├── stores.js                 ← Svelte writable stores (single source of truth)
-    │   └── toast.js                  ← Toast notification helpers
+    │   ├── toast.js                  ← Toast notification helpers
+    │   └── sound.js                  ← Web Audio API tones (no external files)
     └── components/
-        ├── Player.svelte             ← YouTube IFrame API + seek sync + autoplay guard
+        ├── Player.svelte             ← YouTube IFrame API · seek sync · autoplay guard
         ├── Queue.svelte              ← Drag & drop queue
         ├── AddSong.svelte            ← URL input + validation
         ├── History.svelte            ← Playback history + requeue
         ├── PlaybackControls.svelte   ← Autoplay / Shuffle / Random toggle
         ├── Chat.svelte               ← Real-time chat + online users list
-        └── JoinModal.svelte          ← Modal ตั้งชื่อ + Room ID ก่อนเข้าใช้งาน
+        ├── JoinModal.svelte          ← Name + Room ID modal before entering
+        ├── TutorialTooltip.svelte    ← First-time user onboarding tooltip
+        └── LegalModal.svelte         ← Terms of Service + Privacy Policy modal
 ```
 
 ---
@@ -74,66 +80,75 @@ synctune-frontend/
 
 ### Server → Client
 
-| Event | ผลที่เกิด |
+| Event | Effect |
 |---|---|
-| `room_joined` | set room_id + โหลด queue, seek, history, playback mode, chat history, online users |
-| `initial_state` | เหมือน `room_joined` (backward-compat) |
-| `queue_updated` | อัปเดต queue, currentIndex, isPlaying, history |
-| `seek_sync` | ตรวจ drift แล้ว seek ถ้าเกิน 3 วิ |
-| `playback_mode_updated` | อัปเดต autoplay / shuffle / random |
-| `song_skipped` | toast พร้อม reason |
-| `user_joined` | อัปเดต online users + toast notice |
-| `user_left` | อัปเดต online users |
-| `message_received` | append ลง chat |
-| `error` | toast error (`NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED`) |
+| `room_joined` | Sets room ID, loads queue / seek / history / playback mode / chat / online users |
+| `initial_state` | Same as `room_joined` (backward-compat) |
+| `queue_updated` | Updates queue, currentIndex, isPlaying, history |
+| `seek_sync` | Checks drift — seeks if > 3 s |
+| `playback_mode_updated` | Updates autoplay / shuffle / randomPlay |
+| `song_skipped` | Shows toast with skip reason |
+| `user_joined` | Updates online users + shows toast |
+| `user_left` | Updates online users |
+| `message_received` | Appends message to chat history |
+| `error` | Shows error toast (`NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED`) |
 
 ### Client → Server
 
-| Event | ส่งเมื่อ |
+| Event | When |
 |---|---|
-| `join` | อัตโนมัติหลัง connect (ผ่าน `ws.join(username, '', room_id?)`) — ไม่ส่ง room_id = สร้างห้องใหม่ |
-| `add_song` | กดปุ่มเพิ่มเพลง หรือ requeue จาก history |
-| `remove_song` | กด ✕ ใน queue |
-| `reorder_queue` | drag & drop เพลงในคิว |
-| `skip_song` | กดปุ่ม ⏭ |
-| `song_ended` | YouTube player fire state ENDED |
-| `report_error` | YouTube player fire error 101/150 |
-| `set_playback_mode` | toggle autoplay / shuffle / random |
-| `send_message` | ส่งข้อความแชท |
+| `join` | Sent automatically after connect via `ws.join(username, '', room_id?)` — omit room_id to create a new room |
+| `add_song` | User adds a song or requeues from history |
+| `remove_song` | User presses ✕ in the queue |
+| `reorder_queue` | User drag-and-drops a song |
+| `skip_song` | User presses ⏭ |
+| `song_ended` | YouTube player fires ENDED state |
+| `report_error` | YouTube player fires error 101 / 150 |
+| `set_playback_mode` | User toggles autoplay / shuffle / random |
+| `send_message` | User sends a chat message |
 
 ---
 
 ## Features
 
-- **Real-time sync** — queue, seek, playback state sync ทุก client ผ่าน WebSocket
-- **Chat** — real-time chat พร้อม online users list และ chat history
-- **Multi-room** — สร้างห้องใหม่อัตโนมัติ หรือเข้าห้องที่มีด้วย Room ID 6 หลัก, แสดง badge คลิกคัดลอกได้
-- **Join flow** — modal ตั้งชื่อ + Room ID ก่อนเข้า, reconnect อัตโนมัติด้วย sessionStorage
-- **Seek guard** — ตรวจ drift > 3 วิ ก่อน seek, skip ถ้า serverSeek เกิน duration
-- **User seek cooldown** — ไม่ snap กลับ 5 วินาทีหลัง user drag seek bar
-- **Autoplay / Shuffle / Random** — ควบคุมผ่าน PlaybackControls, state อยู่ที่ server
-- **Dark / Light theme** — YouTube theme พร้อม toggle, บันทึกใน localStorage
-- **Responsive** — desktop (2 column) / tablet (320px sidebar) / mobile (1 column)
+- **Real-time sync** — queue, seek, and playback state synced across all clients via WebSocket
+- **Live chat** — real-time messages, online user list, and chat history
+- **Multi-room** — create a new room automatically or join an existing one with a 6-digit Room ID
+- **Join flow** — name + Room ID modal on first visit; auto-rejoin on reconnect via sessionStorage
+- **Seek guard** — only seeks if server drift > 3 s; skips if serverSeek ≥ duration
+- **User seek cooldown** — ignores `seek_sync` for 5 s after the user drags the seek bar
+- **Autoplay / Shuffle / Random** — controlled via PlaybackControls; state lives on the server
+- **Sound notifications** — Web Audio API tones for user join and new chat messages
+- **Dark / Light theme** — toggle saved to localStorage; respects `prefers-color-scheme` on first visit
+- **Responsive** — desktop (2-column) / tablet (320 px sidebar) / mobile (1-column)
 - **Drag & drop** — reorder queue
-- **History requeue** — กด + ใน history เพื่อเพิ่มเพลงกลับเข้าคิว
-- **Thumbnail** — แสดงใน Player, Queue, History
+- **History requeue** — press + in history to re-add any song to the queue
+- **Thumbnails** — shown in Player, Queue, and History
+- **Tutorial** — first-time onboarding tooltip overlay
+- **SEO** — meta tags, Open Graph, Twitter Card, robots.txt, sitemap.xml
 
 ---
 
-## หมายเหตุสำคัญ
+## Important Notes
 
-- **Store อัปเดตผ่าน WebSocket เท่านั้น** — ห้าม optimistic update
-- **queue_id** — ทุก event ใช้ `queue_id` (UUID) ไม่ใช่ YouTube video ID
-- **join ต้องก่อน event อื่น** — backend ตรวจ `NOT_JOINED` error ถ้าส่งก่อน join
-- **room_id** — ตัวเลข 6 หลักเท่านั้น, format ผิด = `INVALID_ROOM_ID` error
-- **YouTube player** — เริ่มต้น mute เสมอ, user กด unmute เอง
-- **Reconnect** — Exponential Backoff: 1s → 2s → 4s → สูงสุด 30s
+- **Stores update via WebSocket only** — no optimistic updates
+- **queue_id** — all events use `queue_id` (UUID), not the YouTube video ID
+- **join must come first** — the backend returns `NOT_JOINED` if any event arrives before `join`
+- **room_id** — 6 digits only; wrong format returns `INVALID_ROOM_ID`
+- **YouTube player** — starts muted by default; user unmutes manually
+- **Reconnect** — exponential backoff: 1 s → 2 s → 4 s → max 30 s
 
 ---
 
-## รัน Docker
+## Docker
 
 ```bash
 docker build -t synctune-frontend .
 docker run -d --name synctune-frontend -p 80:80 synctune-frontend
 ```
+
+---
+
+## License
+
+This project is released for personal and educational use only. Not licensed for commercial use.

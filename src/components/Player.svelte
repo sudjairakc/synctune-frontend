@@ -14,6 +14,7 @@
   let needsResume = false
   let userSeekedAt = 0
   let isUserPaused = false
+  let songEndedSent = false
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -81,11 +82,10 @@
     // YT.PlayerState: -1=UNSTARTED, 0=ENDED, 1=PLAYING, 2=PAUSED, 3=BUFFERING, 5=CUED
     if (event.data === 0) {
       console.info('[Player] video ended, queue_id:', currentQueueId)
-      if (currentQueueId && ws) {
-        const endedId = currentQueueId
-        currentQueueId = null  // clear ก่อนส่ง ป้องกัน ENDED ยิงซ้ำ
+      if (currentQueueId && ws && !songEndedSent) {
+        songEndedSent = true
         try {
-          ws.send('song_ended', { song_id: endedId })
+          ws.send('song_ended', { song_id: currentQueueId })
         } catch (err) {
           console.error('[Player] failed to send song_ended:', err)
         }
@@ -129,6 +129,7 @@
   function loadVideo(videoId, queueId) {
     if (!player || !isPlayerReady) return
     currentQueueId = queueId
+    songEndedSent = false
     userSeekedAt = 0
     if ($isPlaying) {
       player.loadVideoById(videoId)

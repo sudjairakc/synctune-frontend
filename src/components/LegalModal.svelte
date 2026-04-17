@@ -57,7 +57,7 @@
           <p>We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the revised Terms.</p>
 
           <h3>8. Contact</h3>
-          <p>Questions about these Terms? Contact us at <a href="mailto:jainch24@gmail.com">jainch24@gmail.com</a>.</p>
+          <p>Questions about these Terms? Contact us at <a href="mailto:sudjairak.c@gmail.com">sudjairak.c@gmail.com</a>.</p>
 
         {:else}
           <h2>Privacy Policy</h2>
@@ -94,7 +94,7 @@
           <p>We may update this Privacy Policy from time to time. The "Last updated" date at the top reflects the most recent revision.</p>
 
           <h3>8. Contact</h3>
-          <p>Questions about this Privacy Policy? Contact us at <a href="mailto:jainch24@gmail.com">jainch24@gmail.com</a>.</p>
+          <p>Questions about this Privacy Policy? Contact us at <a href="mailto:sudjairak.c@gmail.com">sudjairak.c@gmail.com</a>.</p>
         {/if}
       </div>
     </div>

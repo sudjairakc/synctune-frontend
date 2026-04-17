@@ -1,11 +1,11 @@
 # CLAUDE.md — synctune-frontend
 ## Svelte Frontend · Vite · YouTube IFrame API
 
-อ่านไฟล์นี้ก่อนทำงานใดๆ ใน repo นี้เสมอ
+Read this file before doing any work in this repo.
 
 ---
 
-## 1. Stack และโครงสร้าง
+## 1. Stack & Structure
 
 ```
 synctune-frontend/
@@ -16,6 +16,10 @@ synctune-frontend/
 ├── nginx.conf
 ├── .env.example
 ├── Dockerfile
+├── public/
+│   ├── og-image.png
+│   ├── robots.txt
+│   └── sitemap.xml
 └── src/
     ├── main.js
     ├── App.svelte
@@ -23,20 +27,23 @@ synctune-frontend/
     ├── lib/
     │   ├── websocket.js          ← WS client + exponential backoff + join()
     │   ├── stores.js             ← Svelte writable stores (single source of truth)
-    │   └── toast.js              ← Toast notification store
+    │   ├── toast.js              ← Toast notification store
+    │   └── sound.js              ← Web Audio API tones (no external audio files)
     └── components/
         ├── Player.svelte         ← YouTube IFrame wrapper + seek guard + autoplay
         ├── Queue.svelte          ← Drag & drop queue list
-        ├── AddSong.svelte        ← URL input (ซ่อน added_by ถ้า joined แล้ว)
+        ├── AddSong.svelte        ← URL input (hides added_by once joined)
         ├── History.svelte        ← Playback history + requeue
         ├── PlaybackControls.svelte ← Autoplay / Shuffle / Random toggle
         ├── Chat.svelte           ← Real-time chat + online users
-        └── JoinModal.svelte      ← Modal ตั้งชื่อ + Room ID ก่อนเข้าใช้งาน
+        ├── JoinModal.svelte      ← Name + Room ID modal before entering
+        ├── TutorialTooltip.svelte ← First-time onboarding overlay
+        └── LegalModal.svelte     ← Terms of Service + Privacy Policy modal
 ```
 
 ---
 
-## 2. คำสั่งที่ใช้บ่อย
+## 2. Common Commands
 
 ```bash
 npm install
@@ -50,15 +57,15 @@ npm run build
 
 ## 3. Critical Rules
 
-- **Store อัปเดตผ่าน WebSocket Event เท่านั้น** — ห้าม Optimistic Update
-- **Seek Guard**: ตรวจ drift > 3 วิ ก่อน seek ทุกครั้ง และ skip ถ้า serverSeek >= duration
-- **User Seek Cooldown**: หลัง user drag/pause ใน player ให้ ignore `seek_sync` 5 วินาที เพื่อไม่ให้ snap กลับ
-- **YouTube IFrame API**: ต้องรอ `onYouTubeIframeAPIReady` ก่อน — `playerContainer` ต้องอยู่ใน DOM เสมอ (ห้ามอยู่ใน `{#if}`)
-- **queue_id**: ทุก event ที่ส่งหา backend (`song_ended`, `skip_song`, `report_error`, `reorder_queue`, `remove_song`) ใช้ `queue_id` ไม่ใช่ YouTube video ID
-- **isPlaying**: ตรวจก่อน loadVideo — ถ้า false ให้ `cueVideoById` แทน `loadVideoById`
-- **join ก่อนเสมอ**: `ws.join(username, profile_img, room_id?)` ต้องถูกเรียกก่อน event อื่นทุกตัว — websocket.js จัดการส่งอัตโนมัติใน `onopen`
-- **room_id**: ตัวเลข 6 หลักเท่านั้น — ไม่ส่งหรือ null = server สร้างห้องใหม่ให้อัตโนมัติ
-- **Error ทุก path ต้องมี UI feedback** — ไม่ silent fail
+- **Stores update via WebSocket events only** — no optimistic updates
+- **Seek Guard**: check drift > 3 s before every seek; skip if serverSeek >= duration
+- **User Seek Cooldown**: after user drags/pauses in the player, ignore `seek_sync` for 5 s to prevent snap-back
+- **YouTube IFrame API**: must wait for `onYouTubeIframeAPIReady` — `playerContainer` must always be in the DOM (never inside `{#if}`)
+- **queue_id**: all events sent to the backend (`song_ended`, `skip_song`, `report_error`, `reorder_queue`, `remove_song`) use `queue_id`, not the YouTube video ID
+- **isPlaying**: check before loading video — if false, use `cueVideoById` instead of `loadVideoById`
+- **join first**: `ws.join(username, profile_img, room_id?)` must be called before any other event — websocket.js handles sending it automatically in `onopen`
+- **room_id**: 6 digits only — omitting or null causes the server to create a new room automatically
+- **Every error path must have UI feedback** — no silent failures
 
 ---
 
@@ -66,59 +73,69 @@ npm run build
 
 ### Server → Client
 
-| Event | Store ที่อัปเดต |
+| Event | Stores updated |
 |---|---|
 | `room_joined` | currentRoom, queue, currentIndex, seekTime, isPlaying, history, autoplay, shuffle, randomPlay, chatHistory, onlineUsers |
-| `initial_state` | เหมือน `room_joined` (backward-compat) |
-| `queue_updated` | queue, currentIndex, isPlaying, history (ถ้ามี) |
+| `initial_state` | Same as `room_joined` (backward-compat) |
+| `queue_updated` | queue, currentIndex, isPlaying, history (if present) |
 | `seek_sync` | seekTime, isPlaying |
-| `playback_mode_updated` | autoplay, shuffle, randomPlay (เฉพาะ field ที่ส่งมา — ใช้ `!= null` check) |
-| `song_skipped` | toast พร้อม reason mapping |
+| `playback_mode_updated` | autoplay, shuffle, randomPlay (only fields present — use `!= null` check) |
+| `song_skipped` | toast with reason mapping |
 | `user_joined` | onlineUsers + toast notice |
 | `user_left` | onlineUsers |
 | `message_received` | chatHistory (append) |
-| `error` | toast — รองรับ error code: `NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED` |
+| `error` | toast — codes: `NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED` |
 
 ### Client → Server
 
-| Event | Payload | หมายเหตุ |
+| Event | Payload | Notes |
 |---|---|---|
-| `join` | `{ username, profile_img?, room_id? }` | ส่งทันทีหลัง connect — อัตโนมัติจาก `ws.join()` — ไม่ส่ง room_id = สร้างห้องใหม่ |
-| `add_song` | `{ youtube_url, added_by? }` | `added_by` ส่งเฉพาะเมื่อยังไม่ join |
+| `join` | `{ username, profile_img?, room_id? }` | Sent immediately after connect — auto from `ws.join()` — omit room_id to create a new room |
+| `add_song` | `{ youtube_url, added_by? }` | `added_by` only sent when not yet joined |
 | `remove_song` | `{ song_id: queue_id }` | |
 | `reorder_queue` | `{ song_id: queue_id, new_index }` | |
 | `skip_song` | `{ song_id: queue_id }` | |
 | `song_ended` | `{ song_id: queue_id }` | |
 | `report_error` | `{ song_id: queue_id, error_code }` | |
 | `set_playback_mode` | `{ autoplay?, shuffle?, random_play? }` | |
-| `send_message` | `{ text }` | ตัดที่ 500 ตัวอักษร |
+| `send_message` | `{ text }` | Truncated at 500 characters |
 
 ---
 
 ## 5. Stores
 
-| Store | Type | คำอธิบาย |
+| Store | Type | Description |
 |---|---|---|
-| `queue` | `Song[]` | คิวเพลงปัจจุบัน |
-| `currentIndex` | `number` | index เพลงที่กำลังเล่น |
-| `seekTime` | `number` | ตำแหน่งเล่น (วินาที) จาก server |
+| `queue` | `Song[]` | Current song queue |
+| `currentIndex` | `number` | Index of the currently playing song |
+| `seekTime` | `number` | Current playback position (seconds) from server |
 | `isPlaying` | `boolean` | |
-| `history` | `HistorySong[]` | เพลงที่เล่นผ่านไปแล้ว |
+| `history` | `HistorySong[]` | Previously played songs |
 | `toasts` | `Toast[]` | |
-| `connectionStatus` | `string` | `'connecting'`\|`'connected'`\|`'disconnected'` |
+| `connectionStatus` | `string` | `'connecting'` \| `'connected'` \| `'disconnected'` |
 | `autoplay` | `boolean` | |
 | `shuffle` | `boolean` | |
 | `randomPlay` | `boolean` | |
-| `currentUser` | `User\|null` | user ของตัวเอง (null ถ้ายังไม่ join) |
-| `onlineUsers` | `User[]` | รายชื่อ user ที่ online |
-| `chatHistory` | `ChatMessage[]` | ประวัติข้อความแชท |
-| `currentRoom` | `string\|null` | room_id ของห้องที่กำลังอยู่ (null ถ้ายังไม่ join) |
+| `currentUser` | `User\|null` | The local user (null if not yet joined) |
+| `onlineUsers` | `User[]` | List of users currently online |
+| `chatHistory` | `ChatMessage[]` | Chat message history |
+| `currentRoom` | `string\|null` | room_id of the current room (null if not yet joined) |
 
 ---
 
 ## 6. Theme
 
-ใช้ CSS custom properties ทั้งหมด — ห้าม hardcode hex ใน component
-Dark/Light theme toggle ผ่าน `data-theme` attribute บน `<html>` บันทึกใน `localStorage`
-อ่าน `prefers-color-scheme` ครั้งแรกถ้ายังไม่เคยเลือก
-Variables ทั้งหมด define ใน `App.svelte` `:global(:root)` และ `:global([data-theme="light"])`
+- Use CSS custom properties everywhere — no hardcoded hex values in components
+- Dark/Light theme toggle via `data-theme` attribute on `<html>`, saved to `localStorage`
+- Reads `prefers-color-scheme` on first visit if no preference is stored
+- All variables defined in `App.svelte` under `:global(:root)` and `:global([data-theme="light"])`
+
+---
+
+## 7. SEO & Public Files
+
+- `index.html` has full meta tags: description, Open Graph, Twitter Card, canonical URL, robots
+- `public/og-image.png` — OG image used for social sharing previews
+- `public/robots.txt` — allows all crawlers, links to sitemap
+- `public/sitemap.xml` — single-page sitemap for `https://synctune-frontend.vercel.app/`
+- Live URL: `https://synctune-frontend.vercel.app`
