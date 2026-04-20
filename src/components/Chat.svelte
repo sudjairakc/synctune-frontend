@@ -1,6 +1,6 @@
 <script>
   import { afterUpdate } from 'svelte'
-  import { chatHistory, onlineUsers, currentUser } from '$lib/stores.js'
+  import { chatHistory, onlineUsers, currentUser, ttsActive } from '$lib/stores.js'
 
   export let ws = null
 
@@ -17,6 +17,10 @@
       const label = `${lastMsg.user.username} พูดว่า ${lastMsg.text}`
       const utt = new SpeechSynthesisUtterance(label)
       utt.lang = 'th-TH'
+      utt.rate = 0.8
+      utt.onstart = () => ttsActive.set(true)
+      utt.onend = () => ttsActive.set(false)
+      utt.onerror = () => ttsActive.set(false)
       speechSynthesis.cancel()
       speechSynthesis.speak(utt)
     }
@@ -73,7 +77,7 @@
       <button
         class="tts-btn"
         class:active={ttsEnabled}
-        on:click={() => { ttsEnabled = !ttsEnabled; if (!ttsEnabled) speechSynthesis.cancel() }}
+        on:click={() => { ttsEnabled = !ttsEnabled; if (!ttsEnabled) { speechSynthesis.cancel(); ttsActive.set(false) } }}
         title={ttsEnabled ? 'ปิดอ่านข้อความ' : 'เปิดอ่านข้อความ'}
       >
         {ttsEnabled ? '🔊' : '🔇'}

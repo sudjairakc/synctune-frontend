@@ -41,3 +41,6 @@ export const chatHistory = writable([])
 
 // currentRoom คือ room_id ของห้องที่กำลังอยู่ (null ถ้ายังไม่ได้ join)
 export const currentRoom = writable(null)
+
+// ttsActive — true ขณะที่ TTS กำลังพูดอยู่ (ใช้สำหรับ duck volume)
+export const ttsActive = writable(false)

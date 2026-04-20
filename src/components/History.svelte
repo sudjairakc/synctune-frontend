@@ -43,7 +43,7 @@
           <div class="song-info">
             <span class="song-title">{song.title || song.id}</span>
             <span class="song-meta">
-              {song.added_by} · {formatDuration(song.duration)}
+              {song.added_by} · {formatDuration(song.duration)}{song.skipped_by ? ` · Skipped by ${song.skipped_by}` : ''}
             </span>
           </div>
           <span class="status-badge" class:skipped={song.status === 'skipped'}>

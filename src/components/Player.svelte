@@ -1,7 +1,7 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
-  import { queue, currentIndex, seekTime, isPlaying } from '$lib/stores.js'
+  import { queue, currentIndex, seekTime, isPlaying, ttsActive } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -26,6 +26,13 @@
   }
   $: if ($seekTime && isPlayerReady) {
     syncSeekIfNeeded($seekTime)
+  }
+  $: if (isPlayerReady && player) {
+    if ($ttsActive) {
+      player.setVolume(20)
+    } else {
+      player.setVolume(100)
+    }
   }
 
   // 5. Lifecycle
