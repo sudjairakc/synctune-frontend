@@ -7,6 +7,20 @@
   let messageText = ''
   let listEl
   let autoScroll = true
+  let ttsEnabled = false
+  let lastReadId = null
+
+  $: if (ttsEnabled && $chatHistory.length > 0) {
+    const lastMsg = $chatHistory[$chatHistory.length - 1]
+    if (lastMsg.id !== lastReadId) {
+      lastReadId = lastMsg.id
+      const label = `${lastMsg.user.username} พูดว่า ${lastMsg.text}`
+      const utt = new SpeechSynthesisUtterance(label)
+      utt.lang = 'th-TH'
+      speechSynthesis.cancel()
+      speechSynthesis.speak(utt)
+    }
+  }
 
   const MAX_LENGTH = 500
 
@@ -55,9 +69,19 @@
 <div class="chat">
   <div class="chat-header">
     <span class="chat-title">Chat</span>
-    <div class="online-count" title="Online users">
-      <span class="online-dot"></span>
-      {$onlineUsers.length} online
+    <div class="header-right">
+      <button
+        class="tts-btn"
+        class:active={ttsEnabled}
+        on:click={() => { ttsEnabled = !ttsEnabled; if (!ttsEnabled) speechSynthesis.cancel() }}
+        title={ttsEnabled ? 'ปิดอ่านข้อความ' : 'เปิดอ่านข้อความ'}
+      >
+        {ttsEnabled ? '🔊' : '🔇'}
+      </button>
+      <div class="online-count" title="Online users">
+        <span class="online-dot"></span>
+        {$onlineUsers.length} online
+      </div>
     </div>
   </div>
 
@@ -151,6 +175,32 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tts-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    line-height: 1;
+    color: var(--text-muted);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .tts-btn.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+  }
+
+  .tts-btn:hover { border-color: var(--accent); }
 
   .online-count {
     display: flex;
