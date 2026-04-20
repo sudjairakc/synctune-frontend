@@ -17,7 +17,7 @@
       const label = `${lastMsg.user.username} พูดว่า ${lastMsg.text}`
       const utt = new SpeechSynthesisUtterance(label)
       utt.lang = 'th-TH'
-      utt.rate = 0.8
+      utt.rate = 0.75
       utt.onstart = () => ttsActive.set(true)
       utt.onend = () => ttsActive.set(false)
       utt.onerror = () => ttsActive.set(false)

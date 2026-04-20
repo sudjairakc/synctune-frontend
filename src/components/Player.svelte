@@ -15,6 +15,7 @@
   let userSeekedAt = 0
   let isUserPaused = false
   let songEndedSent = false
+  let savedVolume = null
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -29,9 +30,11 @@
   }
   $: if (isPlayerReady && player) {
     if ($ttsActive) {
-      player.setVolume(20)
-    } else {
-      player.setVolume(100)
+      savedVolume = player.getVolume()
+      player.setVolume(Math.round(savedVolume * 0.5))
+    } else if (savedVolume !== null) {
+      player.setVolume(savedVolume)
+      savedVolume = null
     }
   }
 
@@ -137,7 +140,7 @@
     if (!player || !isPlayerReady) return
     currentQueueId = queueId
     songEndedSent = false
-    userSeekedAt = 0
+    userSeekedAt = Date.now()
     if ($isPlaying) {
       player.loadVideoById(videoId)
     } else {
