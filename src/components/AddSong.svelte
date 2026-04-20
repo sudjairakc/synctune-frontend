@@ -50,7 +50,7 @@
   }
 
   function isValidYouTubeURL(url) {
-    return /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{11}/.test(url)
+    return /^https?:\/\/(www\.)?(youtube\.com\/(watch\?.*v=|shorts\/|music\/watch\?.*v=)|music\.youtube\.com\/watch\?.*v=|youtu\.be\/)[\w-]{11}/.test(url)
   }
 </script>
 
