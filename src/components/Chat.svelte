@@ -1,6 +1,7 @@
 <script>
   import { afterUpdate } from 'svelte'
   import { chatHistory, onlineUsers, currentUser, ttsActive } from '$lib/stores.js'
+  import VoicePTT from './VoicePTT.svelte'
 
   export let ws = null
 
@@ -150,6 +151,7 @@
   {#if charsLeft < 100}
     <div class="char-count" class:warn={charsLeft < 50}>{charsLeft}</div>
   {/if}
+  <VoicePTT {ws} />
 </div>
 
 <style>

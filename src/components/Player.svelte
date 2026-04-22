@@ -1,7 +1,7 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
-  import { queue, currentIndex, seekTime, isPlaying, ttsActive } from '$lib/stores.js'
+  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -16,6 +16,7 @@
   let isUserPaused = false
   let songEndedSent = false
   let savedVolume = null
+  let playbackRate = 1
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -29,7 +30,7 @@
     syncSeekIfNeeded($seekTime)
   }
   $: if (isPlayerReady && player) {
-    if ($ttsActive) {
+    if ($ttsActive || $activeSpeaker) {
       savedVolume = player.getVolume()
       player.setVolume(Math.round(savedVolume * 0.5))
     } else if (savedVolume !== null) {
@@ -146,6 +147,9 @@
     } else {
       player.cueVideoById(videoId)
     }
+    if (playbackRate !== 1) {
+      player.setPlaybackRate(playbackRate)
+    }
     console.info('[Player] loading video:', videoId, 'queue_id:', queueId, 'playing:', $isPlaying)
   }
 
@@ -176,6 +180,13 @@
     if (!player) return
     player.playVideo()
     needsResume = false
+  }
+
+  function handleSpeedChange(rate) {
+    playbackRate = rate
+    if (player && isPlayerReady) {
+      player.setPlaybackRate(rate)
+    }
   }
 
   function handleSkip() {
@@ -213,6 +224,15 @@
         <span class="label">Now Playing</span>
         <span class="title">{currentSong.title || currentSong.id}</span>
         <span class="added-by">Added by {currentSong.added_by}</span>
+      </div>
+      <div class="speed-btns">
+        {#each [0.5, 1, 1.5, 2] as rate}
+          <button
+            class="speed-btn"
+            class:active={playbackRate === rate}
+            on:click={() => handleSpeedChange(rate)}
+          >{rate}x</button>
+        {/each}
       </div>
       <button class="skip-btn" on:click={handleSkip} title="Skip song">⏭</button>
     </div>
@@ -346,4 +366,26 @@
   }
 
   .skip-btn:hover { color: var(--accent); }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .speed-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .speed-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .speed-btn.active { color: var(--accent); border-color: var(--accent); }
 </style>
