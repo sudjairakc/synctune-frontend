@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -127,6 +127,10 @@ export function createWebSocket(url) {
         }
         break
       }
+
+      case 'playback_speed_updated':
+        playbackSpeed.set(payload.speed ?? 1)
+        break
 
       case 'voice_start':
         activeSpeaker.set({ user_id: payload.user_id, username: payload.username })

@@ -1,7 +1,7 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
-  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker } from '$lib/stores.js'
+  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -16,7 +16,6 @@
   let isUserPaused = false
   let songEndedSent = false
   let savedVolume = null
-  let playbackRate = 1
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -27,7 +26,10 @@
     loadVideo(currentSong.id, currentSong.queue_id)
   }
   $: if ($seekTime && isPlayerReady) {
-    syncSeekIfNeeded($seekTime)
+    if ($playbackSpeed === 1) syncSeekIfNeeded($seekTime)
+  }
+  $: if (isPlayerReady && player) {
+    player.setPlaybackRate($playbackSpeed)
   }
   $: if (isPlayerReady && player) {
     if ($ttsActive || $activeSpeaker) {
@@ -147,8 +149,8 @@
     } else {
       player.cueVideoById(videoId)
     }
-    if (playbackRate !== 1) {
-      player.setPlaybackRate(playbackRate)
+    if ($playbackSpeed !== 1) {
+      player.setPlaybackRate($playbackSpeed)
     }
     console.info('[Player] loading video:', videoId, 'queue_id:', queueId, 'playing:', $isPlaying)
   }
@@ -183,10 +185,8 @@
   }
 
   function handleSpeedChange(rate) {
-    playbackRate = rate
-    if (player && isPlayerReady) {
-      player.setPlaybackRate(rate)
-    }
+    if (!ws) return
+    ws.send('set_playback_speed', { speed: rate })
   }
 
   function handleSkip() {
@@ -229,7 +229,7 @@
         {#each [0.5, 1, 1.5, 2] as rate}
           <button
             class="speed-btn"
-            class:active={playbackRate === rate}
+            class:active={$playbackSpeed === rate}
             on:click={() => handleSpeedChange(rate)}
           >{rate}x</button>
         {/each}
