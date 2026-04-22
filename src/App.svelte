@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount } from 'svelte'
   import { createWebSocket } from '$lib/websocket.js'
-  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers, soundPad } from '$lib/stores.js'
+  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers, soundPad, soundPadActive } from '$lib/stores.js'
   import { dismissToast } from '$lib/toast.js'
   import { isSoundEnabled, setSoundEnabled } from '$lib/sound.js'
 
@@ -26,6 +26,7 @@
     chatHistory.set([])
     onlineUsers.set([])
     soundPad.set(new Array(50).fill(null))
+    soundPadActive.set(false)
     // ล้าง session
     sessionStorage.removeItem('username')
     sessionStorage.removeItem('room_id')

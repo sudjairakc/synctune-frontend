@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { soundPad } from '$lib/stores.js'
+  import { soundPad, soundPadActive } from '$lib/stores.js'
   import { showToast } from '$lib/toast.js'
 
   export let ws = null
@@ -50,11 +50,13 @@
       padPlayer.loadVideoById({ videoId, startSeconds: 0 })
       padPlayer.playVideo()
       pendingPadPlay = null
+      soundPadActive.set(true)
     } catch (err) {
       console.error('[SoundPad] play error:', err)
       showToast('Could not play sound pad', 'error')
       playingSlot = null
       pendingPadPlay = null
+      soundPadActive.set(false)
     }
   }
 
@@ -75,7 +77,10 @@
           if (pendingPadPlay) playPadVideo(pendingPadPlay)
         },
         onStateChange: (e) => {
-          if (e.data === 0) playingSlot = null
+          if (e.data === 0) {
+            playingSlot = null
+            soundPadActive.set(false)
+          }
         },
       },
     })
@@ -94,6 +99,7 @@
       }
     }
     playingSlot = null
+    soundPadActive.set(false)
   }
 
   function openEdit(i) {
@@ -190,6 +196,7 @@
   })
 
   onDestroy(() => {
+    soundPadActive.set(false)
     window.removeEventListener('soundpad:play', onSoundPadPlay)
     if (padPlayer) {
       try {

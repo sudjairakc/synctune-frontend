@@ -1,7 +1,7 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
-  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed } from '$lib/stores.js'
+  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed, soundPadActive } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -32,7 +32,7 @@
     player.setPlaybackRate($playbackSpeed)
   }
   $: if (isPlayerReady && player) {
-    if ($ttsActive || $activeSpeaker) {
+    if ($ttsActive || $activeSpeaker || $soundPadActive) {
       savedVolume = player.getVolume()
       player.setVolume(Math.round(savedVolume * 0.5))
     } else if (savedVolume !== null) {
