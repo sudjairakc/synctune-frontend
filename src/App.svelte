@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount } from 'svelte'
   import { createWebSocket } from '$lib/websocket.js'
-  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers } from '$lib/stores.js'
+  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers, soundPad } from '$lib/stores.js'
   import { dismissToast } from '$lib/toast.js'
   import { isSoundEnabled, setSoundEnabled } from '$lib/sound.js'
 
@@ -25,6 +25,7 @@
     history.set([])
     chatHistory.set([])
     onlineUsers.set([])
+    soundPad.set(new Array(50).fill(null))
     // ล้าง session
     sessionStorage.removeItem('username')
     sessionStorage.removeItem('room_id')
@@ -39,6 +40,7 @@
   import JoinModal from './components/JoinModal.svelte'
   import TutorialTooltip from './components/TutorialTooltip.svelte'
   import LegalModal from './components/LegalModal.svelte'
+  import SoundPad from './components/SoundPad.svelte'
 
   let legalOpen = false;
   let legalTab = 'terms';
@@ -153,6 +155,9 @@
       <div data-tutorial="playback-controls"><PlaybackControls {ws} /></div>
       <div data-tutorial="add-song"><AddSong {ws} /></div>
       <div data-tutorial="chat-section"><Chat {ws} /></div>
+      {#if $currentUser}
+        <SoundPad {ws} />
+      {/if}
     </div>
 
     <div class="sidebar">

@@ -1,10 +1,27 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
 const MIN_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
+
+const SOUND_PAD_SLOTS = 50
+
+function normalizeSoundPad(arr) {
+  const out = new Array(SOUND_PAD_SLOTS).fill(null)
+  if (!Array.isArray(arr)) return out
+  for (let i = 0; i < SOUND_PAD_SLOTS; i++) {
+    const x = arr[i]
+    if (x && (x.video_id != null || x.videoId != null)) {
+      out[i] = {
+        video_id: x.video_id ?? x.videoId,
+        title: x.title ?? '',
+      }
+    }
+  }
+  return out
+}
 
 /**
  * createWebSocket สร้าง WebSocket Client พร้อม Auto-reconnect (Exponential Backoff)
@@ -77,6 +94,8 @@ export function createWebSocket(url) {
         randomPlay.set(payload.random_play ?? false)
         if (payload.chat_history != null) chatHistory.set(payload.chat_history)
         if (payload.online_users != null) onlineUsers.set(payload.online_users)
+        if (payload.sound_pad != null) soundPad.set(normalizeSoundPad(payload.sound_pad))
+        if (payload.playback_speed != null) playbackSpeed.set(payload.playback_speed)
         break
 
       case 'playback_mode_updated':
@@ -138,6 +157,14 @@ export function createWebSocket(url) {
 
       case 'voice_stop':
         activeSpeaker.update(s => (s && s.user_id === payload.user_id ? null : s))
+        break
+
+      case 'soundpad_updated':
+        soundPad.set(normalizeSoundPad(payload.sound_pad))
+        break
+
+      case 'soundpad_play':
+        window.dispatchEvent(new CustomEvent('soundpad:play', { detail: payload }))
         break
 
       case 'error': {

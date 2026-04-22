@@ -50,3 +50,6 @@ export const activeSpeaker = writable(null)
 
 // playbackSpeed — ความเร็วการเล่น (0.25 | 0.5 | 1 | 1.5 | 2)
 export const playbackSpeed = writable(1)
+
+// soundPad — Sound Pad 50 ช่อง (null | { video_id, title }) อัปเดตจาก WebSocket เท่านั้น
+export const soundPad = writable(new Array(50).fill(null))
