@@ -34,6 +34,7 @@ export function createWebSocket(url) {
   let reconnectTimer = null
   let isManuallyClosed = false
   let pendingJoin = null  // { username, profile_img, room_id? } รอส่งหลัง connect
+  let wasBroadcasting = false
   const listeners = {}
 
   function connect() {
@@ -105,12 +106,20 @@ export function createWebSocket(url) {
         if (payload.random_play != null) randomPlay.set(payload.random_play)
         break
 
-      case 'queue_updated':
-        queue.set(payload.current_queue ?? [])
-        currentIndex.set(payload.current_index ?? 0)
+      case 'queue_updated': {
+        const newQueue = payload.current_queue ?? []
+        const newIndex = payload.current_index ?? 0
+        const isBroadcastNow = newQueue[newIndex]?.is_broadcast === true
+        if (isBroadcastNow && !wasBroadcasting) {
+          showToast('📡 Broadcast started — your queue will resume after', 'info')
+        }
+        wasBroadcasting = isBroadcastNow
+        queue.set(newQueue)
+        currentIndex.set(newIndex)
         isPlaying.set(payload.is_playing ?? false)
         if (payload.history != null) history.set(payload.history)
         break
+      }
 
       case 'seek_sync':
         seekTime.set(payload.seek_time ?? 0)

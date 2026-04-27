@@ -9,7 +9,10 @@
   let dragFromIndex = null
   let dragOverIndex = null
 
-  // 4. Event Handlers
+  // 4. Derived
+  $: isBroadcasting = $queue[$currentIndex]?.is_broadcast === true
+
+  // 5. Event Handlers
   function handleDragStart(event, index) {
     dragFromIndex = index
     event.dataTransfer.effectAllowed = 'move'
@@ -74,7 +77,15 @@
 <div class="queue">
   <h3>Queue ({$queue.length} {$queue.length === 1 ? 'song' : 'songs'})</h3>
 
-  {#if $queue.length === 0}
+  {#if isBroadcasting}
+    <div class="broadcast-banner">
+      <span class="broadcast-icon">📡</span>
+      <div class="broadcast-text">
+        <span class="broadcast-title">Broadcast in progress</span>
+        <span class="broadcast-sub">Your queue will resume automatically after the broadcast ends</span>
+      </div>
+    </div>
+  {:else if $queue.length === 0}
     <p class="empty">Queue is empty. Add a song to start playing</p>
   {:else}
     <ul class="song-list">
@@ -134,6 +145,38 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .broadcast-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(224, 92, 0, 0.08);
+    border: 1px solid rgba(224, 92, 0, 0.3);
+    border-radius: 8px;
+  }
+
+  .broadcast-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .broadcast-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .broadcast-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e05c00;
+  }
+
+  .broadcast-sub {
+    font-size: 12px;
+    color: var(--text-muted);
   }
 
   .empty {

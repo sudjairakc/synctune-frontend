@@ -14,6 +14,7 @@
   let playingUserId = null
   let savingSlot = false
   let pendingPadPlay = null
+  let historyExpanded = false
 
   function getUserLabel(userId) {
     if (!userId) return null
@@ -321,20 +322,25 @@
 
   {#if $soundpadHistory.length > 0}
     <div class="pad-history">
-      <h4 class="pad-history-title">Recent</h4>
-      <div class="pad-history-list">
-        {#each $soundpadHistory.slice(0, 10) as entry (entry.timestamp + entry.user_id)}
-          <div class="pad-history-row">
-            <img class="pad-history-thumb" src={THUMB(entry.video_id)} alt="" loading="lazy" />
-            <div class="pad-history-info">
-              <span class="pad-history-song">{entry.title}</span>
-              <span class="pad-history-meta">
-                {entry.played_by} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+      <button class="pad-history-toggle" on:click={() => (historyExpanded = !historyExpanded)}>
+        <span class="pad-history-title">Recent</span>
+        <span class="pad-history-chevron" class:open={historyExpanded}>›</span>
+      </button>
+      {#if historyExpanded}
+        <div class="pad-history-list">
+          {#each $soundpadHistory.slice(0, 10) as entry (entry.timestamp + entry.user_id)}
+            <div class="pad-history-row">
+              <img class="pad-history-thumb" src={THUMB(entry.video_id)} alt="" loading="lazy" />
+              <div class="pad-history-info">
+                <span class="pad-history-song">{entry.title}</span>
+                <span class="pad-history-meta">
+                  {entry.played_by} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
-          </div>
-        {/each}
-      </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -567,8 +573,18 @@
     padding-top: 10px;
   }
 
+  .pad-history-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0 0 8px;
+    cursor: pointer;
+  }
+
   .pad-history-title {
-    margin: 0 0 8px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
@@ -576,10 +592,24 @@
     color: var(--text-muted);
   }
 
+  .pad-history-chevron {
+    font-size: 16px;
+    color: var(--text-muted);
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+
+  .pad-history-chevron.open {
+    transform: rotate(-90deg);
+  }
+
   .pad-history-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
   }
 
   .pad-history-row {
