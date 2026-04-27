@@ -1,15 +1,17 @@
 <script>
   import { onDestroy, onMount } from 'svelte'
   import { createWebSocket } from '$lib/websocket.js'
-  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers, soundPad, soundPadActive } from '$lib/stores.js'
+  import { connectionStatus, toasts, currentUser, currentRoom, queue, currentIndex, seekTime, isPlaying, history, chatHistory, onlineUsers, soundPad, soundPadActive, ttsActive, soundEnabled, soundpadHistory } from '$lib/stores.js'
   import { dismissToast } from '$lib/toast.js'
-  import { isSoundEnabled, setSoundEnabled } from '$lib/sound.js'
-
-  let soundEnabled = isSoundEnabled()
+  import { setSoundEnabled } from '$lib/sound.js'
 
   function toggleSound() {
-    soundEnabled = !soundEnabled
-    setSoundEnabled(soundEnabled)
+    const next = !$soundEnabled
+    setSoundEnabled(next)
+    if (!next) {
+      speechSynthesis.cancel()
+      ttsActive.set(false)
+    }
   }
 
   function handleLeaveRoom() {
@@ -27,6 +29,7 @@
     onlineUsers.set([])
     soundPad.set(new Array(50).fill(null))
     soundPadActive.set(false)
+    soundpadHistory.set([])
     // ล้าง session
     sessionStorage.removeItem('username')
     sessionStorage.removeItem('room_id')

@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -96,6 +96,7 @@ export function createWebSocket(url) {
         if (payload.online_users != null) onlineUsers.set(payload.online_users)
         if (payload.sound_pad != null) soundPad.set(normalizeSoundPad(payload.sound_pad))
         if (payload.playback_speed != null) playbackSpeed.set(payload.playback_speed)
+        if (payload.soundpad_history != null) soundpadHistory.set(payload.soundpad_history)
         break
 
       case 'playback_mode_updated':
@@ -163,9 +164,24 @@ export function createWebSocket(url) {
         soundPad.set(normalizeSoundPad(payload.sound_pad))
         break
 
-      case 'soundpad_play':
+      case 'soundpad_play': {
         window.dispatchEvent(new CustomEvent('soundpad:play', { detail: payload }))
+        const pad = get(soundPad)
+        const padCell = pad[payload.slot]
+        const me = get(currentUser)
+        soundpadHistory.update(h => {
+          const entry = {
+            slot: payload.slot,
+            video_id: payload.video_id,
+            title: padCell?.title || payload.video_id,
+            played_by: me?.id === payload.user_id ? me.username : (get(onlineUsers).find(u => u.id === payload.user_id)?.username ?? 'Unknown'),
+            user_id: payload.user_id,
+            timestamp: Date.now(),
+          }
+          return [entry, ...h].slice(0, 100)
+        })
         break
+      }
 
       case 'error': {
         const errorMsgMap = {

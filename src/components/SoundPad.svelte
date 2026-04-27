@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { soundPad, soundPadActive } from '$lib/stores.js'
+  import { soundPad, soundPadActive, onlineUsers, currentUser, soundpadHistory } from '$lib/stores.js'
   import { showToast } from '$lib/toast.js'
 
   export let ws = null
@@ -11,8 +11,17 @@
   let editingSlot = null
   let editUrl = ''
   let playingSlot = null
+  let playingUserId = null
   let savingSlot = false
   let pendingPadPlay = null
+
+  function getUserLabel(userId) {
+    if (!userId) return null
+    const me = $currentUser
+    if (me && me.id === userId) return 'you'
+    const user = $onlineUsers.find(u => u.id === userId)
+    return user ? user.username : null
+  }
 
   const THUMB = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`
 
@@ -42,6 +51,7 @@
     const slot = d.slot
     if (videoId == null || slot == null) return
     playingSlot = slot
+    playingUserId = d.user_id ?? null
     if (!isPadReady || !padPlayer) {
       pendingPadPlay = detail
       return
@@ -79,6 +89,7 @@
         onStateChange: (e) => {
           if (e.data === 0) {
             playingSlot = null
+            playingUserId = null
             soundPadActive.set(false)
           }
         },
@@ -93,12 +104,15 @@
   function handleStop() {
     if (padPlayer && isPadReady) {
       try {
+        padPlayer.setVolume(0)
         padPlayer.stopVideo()
+        padPlayer.setVolume(100)
       } catch (err) {
         console.warn('[SoundPad] stop error:', err)
       }
     }
     playingSlot = null
+    playingUserId = null
     soundPadActive.set(false)
   }
 
@@ -278,6 +292,9 @@
               loading="lazy"
             />
             <span class="slot-title">{cell.title || cell.video_id}</span>
+            {#if playingSlot === i && getUserLabel(playingUserId)}
+              <span class="playing-user">{getUserLabel(playingUserId)}</span>
+            {/if}
             <button
               type="button"
               class="slot-clear"
@@ -301,6 +318,25 @@
       </div>
     {/each}
   </div>
+
+  {#if $soundpadHistory.length > 0}
+    <div class="pad-history">
+      <h4 class="pad-history-title">Recent</h4>
+      <div class="pad-history-list">
+        {#each $soundpadHistory.slice(0, 10) as entry (entry.timestamp + entry.user_id)}
+          <div class="pad-history-row">
+            <img class="pad-history-thumb" src={THUMB(entry.video_id)} alt="" loading="lazy" />
+            <div class="pad-history-info">
+              <span class="pad-history-song">{entry.title}</span>
+              <span class="pad-history-meta">
+                {entry.played_by} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -439,6 +475,17 @@
     padding-right: 16px;
   }
 
+  .playing-user {
+    font-size: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    padding-right: 16px;
+  }
+
   .slot-clear {
     position: absolute;
     top: 2px;
@@ -512,6 +559,61 @@
   .btn-small:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .pad-history {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .pad-history-title {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .pad-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pad-history-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pad-history-thumb {
+    width: 36px;
+    height: 27px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .pad-history-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .pad-history-song {
+    font-size: 12px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pad-history-meta {
+    font-size: 10px;
+    color: var(--text-muted);
   }
 
   @media (max-width: 900px) {

@@ -3,6 +3,8 @@
  * ไม่ต้องโหลดไฟล์เสียงภายนอก สร้าง tone ด้วย oscillator
  */
 
+import { soundEnabled } from './stores.js'
+
 let audioCtx = null
 
 function getAudioContext() {
@@ -40,6 +42,7 @@ export function isSoundEnabled() {
 
 export function setSoundEnabled(val) {
   localStorage.setItem('sound_enabled', String(val))
+  soundEnabled.set(val)
 }
 
 /** เสียง toast ทั่วไป (info / warning / error) */

@@ -103,7 +103,7 @@
           </div>
 
           {#if i === $currentIndex}
-            <span class="now-playing-badge">Now Playing</span>
+            <span class="now-playing-badge" class:broadcast-badge={song.is_broadcast}>{song.is_broadcast ? '📡 Broadcast' : 'Now Playing'}</span>
           {:else}
             <button
               class="remove-btn"
@@ -217,6 +217,11 @@
   .song-meta {
     color: var(--text-muted);
     font-size: 12px;
+  }
+
+  .now-playing-badge.broadcast-badge {
+    color: #e05c00;
+    background: rgba(224, 92, 0, 0.12);
   }
 
   .now-playing-badge {

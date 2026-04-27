@@ -15,13 +15,14 @@
   let userSeekedAt = 0
   let isUserPaused = false
   let songEndedSent = false
-  let savedVolume = null
+  let originalVolume = null
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
 
   // 4. Derived
   $: currentSong = $queue[$currentIndex]
+  $: isBroadcast = currentSong?.is_broadcast === true
   $: if (currentSong && isPlayerReady && currentSong.queue_id !== currentQueueId) {
     loadVideo(currentSong.id, currentSong.queue_id)
   }
@@ -32,12 +33,13 @@
     player.setPlaybackRate($playbackSpeed)
   }
   $: if (isPlayerReady && player) {
-    if ($ttsActive || $activeSpeaker || $soundPadActive) {
-      savedVolume = player.getVolume()
-      player.setVolume(Math.round(savedVolume * 0.5))
-    } else if (savedVolume !== null) {
-      player.setVolume(savedVolume)
-      savedVolume = null
+    const shouldDuck = $ttsActive || $activeSpeaker || $soundPadActive
+    if (shouldDuck && originalVolume === null) {
+      originalVolume = player.getVolume()
+      player.setVolume(Math.round(originalVolume * 0.6))
+    } else if (!shouldDuck && originalVolume !== null) {
+      player.setVolume(originalVolume)
+      originalVolume = null
     }
   }
 
@@ -221,7 +223,7 @@
         <img class="now-playing-thumb" src={currentSong.thumbnail} alt="" aria-hidden="true" />
       {/if}
       <div class="now-playing-text">
-        <span class="label">Now Playing</span>
+        <span class="label" class:broadcast={isBroadcast}>{isBroadcast ? '📡 Broadcast' : 'Now Playing'}</span>
         <span class="title">{currentSong.title || currentSong.id}</span>
         <span class="added-by">Added by {currentSong.added_by}</span>
       </div>
@@ -234,7 +236,7 @@
           >{rate}x</button>
         {/each}
       </div>
-      <button class="skip-btn" on:click={handleSkip} title="Skip song">⏭</button>
+      <button class="skip-btn" on:click={handleSkip} title="Skip song" disabled={isBroadcast}>⏭</button>
     </div>
   {/if}
 </div>
@@ -366,6 +368,8 @@
   }
 
   .skip-btn:hover { color: var(--accent); }
+  .skip-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .label.broadcast { color: #e05c00; }
 
   .speed-btns {
     display: flex;

@@ -54,5 +54,11 @@ export const playbackSpeed = writable(1)
 // soundPad — Sound Pad 50 ช่อง (null | { video_id, title }) อัปเดตจาก WebSocket เท่านั้น
 export const soundPad = writable(new Array(50).fill(null))
 
-// soundPadActive — true ขณะ Sound Pad กำลังเล่น (ให้ Player หลักลดเสียง 50%)
+// soundPadActive — true ขณะ Sound Pad กำลังเล่น (ให้ Player หลักลดเสียง)
 export const soundPadActive = writable(false)
+
+// soundEnabled — เปิด/ปิดเสียงทั้งระบบ (ยกเว้น iframe) ซิงค์กับ localStorage
+export const soundEnabled = writable(localStorage.getItem('sound_enabled') !== 'false')
+
+// soundpadHistory — ประวัติการกด Sound Pad (newest first, max 100)
+export const soundpadHistory = writable([])
