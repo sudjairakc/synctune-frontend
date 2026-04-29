@@ -62,3 +62,6 @@ export const soundEnabled = writable(localStorage.getItem('sound_enabled') !== '
 
 // soundpadHistory — ประวัติการกด Sound Pad (newest first, max 100)
 export const soundpadHistory = writable([])
+
+// pinnedMessages — ข้อความที่ถูก pin ในห้อง (newest first, max 20)
+export const pinnedMessages = writable([])

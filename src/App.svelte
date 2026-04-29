@@ -167,7 +167,6 @@
     <div class="player-section">
       <Player {ws} />
       <div data-tutorial="playback-controls"><PlaybackControls {ws} /></div>
-      <div data-tutorial="add-song"><AddSong {ws} /></div>
       <div data-tutorial="chat-section"><Chat {ws} /></div>
       {#if $currentUser}
         <SoundPad {ws} />
@@ -175,6 +174,7 @@
     </div>
 
     <div class="sidebar">
+      <div data-tutorial="add-song"><AddSong {ws} /></div>
       <div data-tutorial="queue-section"><Queue {ws} /></div>
       <div class="history-section" data-tutorial="history-section">
         <History {ws} />

@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -149,13 +149,34 @@ export function createWebSocket(url) {
 
       case 'message_received': {
         chatHistory.update((msgs) => [...msgs, payload])
-        // เล่นเสียงเฉพาะข้อความจากคนอื่น
         const me = get(currentUser)
         if (!me || payload.user.id !== me.id) {
           playChatMessage()
         }
         break
       }
+
+      case 'message_deleted':
+        chatHistory.update((msgs) =>
+          msgs.map((m) =>
+            m.id === payload.message_id
+              ? { ...m, deleted: true, text: '', image_url: '' }
+              : m
+          )
+        )
+        break
+
+      case 'message_reacted':
+        chatHistory.update((msgs) =>
+          msgs.map((m) =>
+            m.id === payload.message_id ? { ...m, reactions: payload.reactions } : m
+          )
+        )
+        break
+
+      case 'pins_updated':
+        pinnedMessages.set(payload.pins ?? [])
+        break
 
       case 'playback_speed_updated':
         playbackSpeed.set(payload.speed ?? 1)
