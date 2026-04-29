@@ -61,6 +61,7 @@
 
   let theme = 'dark'
   let showJoinModal = true
+  let initialRoomId = ''
 
   onMount(() => {
     const saved = localStorage.getItem('theme')
@@ -71,11 +72,20 @@
     }
     document.documentElement.setAttribute('data-theme', theme)
 
-    // ถ้าเคย join ไว้ใน session เดิม ให้ join อัตโนมัติ
+    // อ่าน ?roomId= จาก URL แล้วล้างออกเพื่อไม่ให้ค้างใน address bar
+    const params = new URLSearchParams(window.location.search)
+    const urlRoomId = params.get('roomId') || ''
+    if (urlRoomId && /^\d{6}$/.test(urlRoomId)) {
+      initialRoomId = urlRoomId
+      history.replaceState(null, '', window.location.pathname)
+    }
+
     const savedUsername = sessionStorage.getItem('username')
     const savedRoomId = sessionStorage.getItem('room_id')
+
+    // มีชื่ออยู่แล้ว → join ทันที (ให้ URL roomId มีความสำคัญกว่า session roomId)
     if (savedUsername) {
-      handleJoin({ detail: { username: savedUsername, room_id: savedRoomId || null } })
+      handleJoin({ detail: { username: savedUsername, room_id: initialRoomId || savedRoomId || null } })
     }
   })
 
@@ -104,7 +114,7 @@
   <title>{APP_TITLE}</title>
 </svelte:head>
 
-<JoinModal visible={showJoinModal} on:join={handleJoin} />
+<JoinModal visible={showJoinModal} {initialRoomId} on:join={handleJoin} />
 <TutorialTooltip />
 
 <div class="app">

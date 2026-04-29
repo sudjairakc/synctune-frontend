@@ -50,8 +50,14 @@
   }
 
   function isValidYouTubeURL(url) {
-    return /^https?:\/\/(www\.)?(youtube\.com\/(watch\?.*v=|shorts\/|music\/watch\?.*v=)|music\.youtube\.com\/watch\?.*v=|youtu\.be\/)[\w-]{11}/.test(url)
+    return /^https?:\/\/(www\.)?(youtube\.com\/(watch\?.*v=|shorts\/|live\/|music\/watch\?.*v=)|music\.youtube\.com\/watch\?.*v=|youtu\.be\/)[\w-]{11}/.test(url)
   }
+
+  function isLiveYouTubeURL(url) {
+    return /youtube\.com\/live\//.test(url)
+  }
+
+  $: liveWarning = youtubeUrl && isLiveYouTubeURL(youtubeUrl.trim())
 </script>
 
 <div class="add-song">
@@ -87,6 +93,9 @@
     </button>
   </div>
 
+  {#if liveWarning}
+    <p class="live-text">📡 Live stream — will play from live edge, seek disabled</p>
+  {/if}
   {#if errorMessage}
     <p class="error-text">{errorMessage}</p>
   {/if}
@@ -156,6 +165,12 @@
 
   .add-btn:hover:not(:disabled) { background: var(--yt-red-hover); }
   .add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .live-text {
+    margin: 8px 0 0 0;
+    color: #e05c00;
+    font-size: 13px;
+  }
 
   .error-text {
     margin: 8px 0 0 0;

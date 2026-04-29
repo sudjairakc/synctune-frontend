@@ -16,6 +16,8 @@
   let isUserPaused = false
   let songEndedSent = false
   let originalVolume = null
+  let loadingVideo = false
+  let isLiveVideo = false
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -33,7 +35,7 @@
     player.setPlaybackRate($playbackSpeed)
   }
   $: if (isPlayerReady && player) {
-    const shouldDuck = $ttsActive || $activeSpeaker || $soundPadActive
+    const shouldDuck = $ttsActive || $activeSpeaker.length > 0 || $soundPadActive
     if (shouldDuck && originalVolume === null) {
       originalVolume = player.getVolume()
       player.setVolume(Math.round(originalVolume * 0.6))
@@ -112,8 +114,8 @@
       userSeekedAt = Date.now()
     }
     if (event.data === 3) {
-      // BUFFERING — user drag seek bar → cooldown ชั่วคราวเท่านั้น ไม่ set isUserPaused
-      userSeekedAt = Date.now()
+      // BUFFERING — set cooldown เฉพาะตอน user drag seek bar (ไม่ใช่ตอน loadVideo)
+      if (!loadingVideo) userSeekedAt = Date.now()
     }
     if (event.data === 5 && $isPlaying) {
       needsResume = true
@@ -122,6 +124,12 @@
     if (event.data === 1) {
       needsResume = false
       isUserPaused = false
+      loadingVideo = false
+      // fallback: detect live via duration ถ้า is_live ไม่ได้ถูกส่งมา (เช่น watch?v= ที่เป็น live)
+      if (!isLiveVideo && player.getDuration() === 0) {
+        isLiveVideo = true
+        console.info('[Player] live stream detected via duration, seek disabled')
+      }
     }
   }
 
@@ -145,11 +153,16 @@
     if (!player || !isPlayerReady) return
     currentQueueId = queueId
     songEndedSent = false
-    userSeekedAt = Date.now()
+    loadingVideo = true
+    isLiveVideo = currentSong?.is_live === true
+    userSeekedAt = 0
+    // startSeconds ทำให้ video เริ่มที่ตำแหน่งที่ถูกต้องทันที (ไม่ต้องรอ seek_sync)
+    // ไม่ส่ง startSeconds ถ้าเป็น 0 เพื่อให้ live stream เล่นจาก live edge
+    const startSeconds = $seekTime > 0 ? $seekTime : undefined
     if ($isPlaying) {
-      player.loadVideoById(videoId)
+      player.loadVideoById({ videoId, startSeconds })
     } else {
-      player.cueVideoById(videoId)
+      player.cueVideoById({ videoId, startSeconds })
     }
     if ($playbackSpeed !== 1) {
       player.setPlaybackRate($playbackSpeed)
@@ -159,9 +172,8 @@
 
   function syncSeekIfNeeded(serverSeek) {
     if (!player || !isPlayerReady) return
-    // ถ้า user กด pause อยู่ → ignore seek_sync ทั้งหมด
     if (isUserPaused) return
-    // ถ้า user เพิ่ง drag seek bar ใน cooldown window → ignore
+    if (isLiveVideo) return
     if (userSeekedAt && Date.now() - userSeekedAt < USER_SEEK_COOLDOWN) return
     try {
       const duration = player.getDuration()

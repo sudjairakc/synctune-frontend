@@ -2,11 +2,12 @@
   import { createEventDispatcher } from 'svelte'
 
   export let visible = true
+  export let initialRoomId = ''
 
   const dispatch = createEventDispatcher()
 
   let username = ''
-  let roomId = ''
+  let roomId = initialRoomId
   let error = ''
 
   function handleSubmit() {

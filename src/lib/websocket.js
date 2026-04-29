@@ -162,11 +162,15 @@ export function createWebSocket(url) {
         break
 
       case 'voice_start':
-        activeSpeaker.set({ user_id: payload.user_id, username: payload.username })
+        activeSpeaker.update(arr =>
+          arr.find(s => s.user_id === payload.user_id)
+            ? arr
+            : [...arr, { user_id: payload.user_id, username: payload.username }]
+        )
         break
 
       case 'voice_stop':
-        activeSpeaker.update(s => (s && s.user_id === payload.user_id ? null : s))
+        activeSpeaker.update(arr => arr.filter(s => s.user_id !== payload.user_id))
         break
 
       case 'soundpad_updated':

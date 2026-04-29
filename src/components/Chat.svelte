@@ -1,6 +1,8 @@
 <script>
   import { afterUpdate } from 'svelte'
-  import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled } from '$lib/stores.js'
+  import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker } from '$lib/stores.js'
+
+  $: speakingIds = new Set($activeSpeaker.map(s => s.user_id))
   import VoicePTT from './VoicePTT.svelte'
 
   export let ws = null
@@ -85,7 +87,7 @@
   {#if $onlineUsers.length > 0}
     <div class="online-list">
       {#each $onlineUsers as user (user.id)}
-        <div class="online-user" title={user.username}>
+        <div class="online-user" class:speaking={speakingIds.has(user.id)} title={user.username}>
           {#if user.profile_img}
             <img class="avatar" src={user.profile_img} alt={user.username} />
           {:else}
@@ -204,7 +206,19 @@
     flex-shrink: 0;
   }
 
-  .online-user { display: flex; }
+  .online-user { display: flex; position: relative; }
+
+  .online-user.speaking .avatar,
+  .online-user.speaking .avatar-placeholder {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+    animation: speaking-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes speaking-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px var(--accent); }
+    50% { box-shadow: 0 0 0 4px var(--accent); }
+  }
 
   .avatar {
     width: 28px;
@@ -212,6 +226,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--bg-base);
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
 
   .avatar-placeholder {
@@ -227,6 +242,7 @@
     justify-content: center;
     flex-shrink: 0;
     border: 2px solid var(--bg-base);
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
 
   .message-list {

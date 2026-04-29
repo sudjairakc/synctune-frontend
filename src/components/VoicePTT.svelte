@@ -51,20 +51,21 @@
     stopLocalStream()
   }
 
-  // prevent context menu on long-press mobile
-  function handleContextMenu(e) { e.preventDefault() }
-
   // --- Incoming signaling handlers ---
 
   function handleVoiceStart(payload) {
     const me = get(currentUser)
     if (!me || payload.user_id === me.id) return
-    activeSpeaker.set({ user_id: payload.user_id, username: payload.username })
+    activeSpeaker.update(arr =>
+      arr.find(s => s.user_id === payload.user_id)
+        ? arr
+        : [...arr, { user_id: payload.user_id, username: payload.username }]
+    )
     ws.send('voice_join', { to: payload.user_id })
   }
 
   function handleVoiceStop(payload) {
-    activeSpeaker.update(s => (s && s.user_id === payload.user_id ? null : s))
+    activeSpeaker.update(arr => arr.filter(s => s.user_id !== payload.user_id))
     const pc = peers.get(payload.user_id)
     if (pc) { pc.close(); peers.delete(payload.user_id) }
     const audio = audioEls.get(payload.user_id)
@@ -145,26 +146,14 @@
 </script>
 
 <div class="voice-ptt">
-  {#if $activeSpeaker}
-    <div class="speaking-indicator">
-      <span class="mic-icon speaking">🎙</span>
-      <span class="speaking-name">{$activeSpeaker.username} is speaking…</span>
-    </div>
-  {/if}
-
   <button
     class="ptt-btn"
     class:active={isSpeaking}
-    on:mousedown={startPTT}
-    on:mouseup={stopPTT}
-    on:mouseleave={stopPTT}
-    on:touchstart|preventDefault={startPTT}
-    on:touchend={stopPTT}
-    on:contextmenu={handleContextMenu}
-    title="Hold to talk"
+    on:click={() => isSpeaking ? stopPTT() : startPTT()}
+    title={isSpeaking ? 'Click to stop' : 'Click to talk'}
   >
     <span class="mic-icon">{isSpeaking ? '🎙' : '🎤'}</span>
-    <span class="ptt-label">{isSpeaking ? 'Release' : 'Hold to Talk'}</span>
+    <span class="ptt-label">{isSpeaking ? 'Speaking…' : 'Talk'}</span>
   </button>
 </div>
 
@@ -207,21 +196,4 @@
   }
 
   .mic-icon { font-size: 15px; }
-
-  .speaking-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--accent);
-    font-weight: 600;
-    animation: pulse 1.2s ease-in-out infinite;
-  }
-
-  .mic-icon.speaking { font-size: 13px; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
 </style>

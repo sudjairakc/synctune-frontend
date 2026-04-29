@@ -45,8 +45,8 @@ export const currentRoom = writable(null)
 // ttsActive — true ขณะที่ TTS กำลังพูดอยู่ (ใช้สำหรับ duck volume)
 export const ttsActive = writable(false)
 
-// activeSpeaker — User ที่กำลัง PTT อยู่ (null ถ้าไม่มีใครพูด)
-export const activeSpeaker = writable(null)
+// activeSpeaker — รายชื่อ User ที่กำลัง PTT อยู่ ({ user_id, username }[])
+export const activeSpeaker = writable([])
 
 // playbackSpeed — ความเร็วการเล่น (0.25 | 0.5 | 1 | 1.5 | 2)
 export const playbackSpeed = writable(1)
