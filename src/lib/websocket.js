@@ -114,12 +114,12 @@ export function createWebSocket(url) {
           showToast('📡 Broadcast started — your queue will resume after', 'info')
         }
         wasBroadcasting = isBroadcastNow
-        // seekTime ต้อง set ก่อน queue/currentIndex เสมอ
-        // เพราะ Player.svelte ใช้ $seekTime ใน loadVideo ที่ reactive กับ queue/index
+        // ต้อง set ค่าทั้งหมดก่อน queue/currentIndex เสมอ
+        // เพราะ Player.svelte reactive กับ queue → loadVideo() จะใช้ $isPlaying และ $seekTime ทันที
         if (payload.seek_time != null) seekTime.set(payload.seek_time)
+        isPlaying.set(payload.is_playing ?? false)
         queue.set(newQueue)
         currentIndex.set(newIndex)
-        isPlaying.set(payload.is_playing ?? false)
         if (payload.history != null) history.set(payload.history)
         break
       }
