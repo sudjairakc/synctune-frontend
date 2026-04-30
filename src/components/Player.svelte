@@ -20,6 +20,8 @@
   let originalVolume = null
   let loadingVideo = false
   let isLiveVideo = false
+  /** โหลด VoD ด้วย offset จาก seek_time — ถ้าเป็นสดจริง (duration=0) ต้อง reload ให้เลื่อนไปที่ live edge */
+  let lastLoadUsedSeekOffset = false
 
   const SEEK_DRIFT_THRESHOLD = 3
   const USER_SEEK_COOLDOWN = 5000
@@ -30,7 +32,9 @@
   $: if (currentSong && isPlayerReady && currentSong.queue_id !== currentQueueId) {
     loadVideo(currentSong.id, currentSong.queue_id)
   }
-  $: if ($seekTime && isPlayerReady) {
+  // โหมดสด: ไม่ sync จาก server (ไม่ย้อนเลขกับสดจริง), ให้เลื่อนเล่บของ YouTube เป็นตัวกำหนดจุด
+  $: livePlaybackMode = (currentSong?.is_live === true) || isLiveVideo
+  $: if ($seekTime && isPlayerReady && !livePlaybackMode) {
     if ($playbackSpeed === 1) syncSeekIfNeeded($seekTime)
   }
   $: if (isPlayerReady && player) {
@@ -130,7 +134,23 @@
       } catch (_) {
         playerVideoId = null
       }
-      // เมื่อ broadcast หรือโหลดคิวใหม่ คิวอัปเดตเป็นเพลงใหม่เร็วกว่า iframe สลับ — ผูก PLAYING เฉพาะเมื่อ id ใน player ตรงกับรายการคิว
+      // สดจาก watch?v= มัก duration=0 — อย่าค้างจาก startSeconds (offset VoD เดิม)
+      if (player.getDuration() === 0) {
+        if (!isLiveVideo) {
+          isLiveVideo = true
+          console.info('[Player] live stream (duration heuristic); no server-driven seek')
+          if (!currentSong?.is_live && lastLoadUsedSeekOffset) {
+            try {
+              if ($isPlaying) player.loadVideoById({ videoId: currentSong.id })
+              else player.cueVideoById({ videoId: currentSong.id })
+            } catch (err) {
+              console.warn('[Player] reload live edge failed:', err)
+            }
+            return
+          }
+        }
+      }
+
       const queueAligned = !!(currentQueueId && currentSong?.queue_id === currentQueueId)
       let vidAligned = true
       if (playerVideoId != null && currentSong?.id) {
@@ -142,11 +162,6 @@
       needsResume = false
       isUserPaused = false
       loadingVideo = false
-      // fallback: detect live via duration ถ้า is_live ไม่ได้ถูกส่งมา (เช่น watch?v= ที่เป็น live)
-      if (!isLiveVideo && player.getDuration() === 0) {
-        isLiveVideo = true
-        console.info('[Player] live stream detected via duration, seek disabled')
-      }
     }
   }
 
@@ -173,11 +188,11 @@
     currentQueueId = queueId
     loadingVideo = true
     isLiveVideo = currentSong?.is_live === true
+    // VoD เท่านั้นที่ใช้เลขจากเซิร์ฟเวอร์ — URL สด (/live...) ให้เล่นที่ขอบสดของ YouTube เสมอ
+    lastLoadUsedSeekOffset = !isLiveVideo && $seekTime > 0
+    const startSeconds = lastLoadUsedSeekOffset ? $seekTime : undefined
     // block seek_sync 5 วินาทีหลังโหลดวิดีโอใหม่ ป้องกัน stale seek_sync จาก SeekTicker race
     userSeekedAt = Date.now()
-    // startSeconds ทำให้ video เริ่มที่ตำแหน่งที่ถูกต้องทันที (ไม่ต้องรอ seek_sync)
-    // ไม่ส่ง startSeconds ถ้าเป็น 0 เพื่อให้ live stream เล่นจาก live edge
-    const startSeconds = $seekTime > 0 ? $seekTime : undefined
     if ($isPlaying) {
       player.loadVideoById({ videoId, startSeconds })
     } else {
@@ -192,7 +207,8 @@
   function syncSeekIfNeeded(serverSeek) {
     if (!player || !isPlayerReady) return
     if (isUserPaused) return
-    if (isLiveVideo) return
+    /** โหมดสด: ให้เล่นตาม live / แล้วแต่ user เลื่อน — อย่ายิง seek ตามเลขเซิร์ฟเวอร์ย้อนหลัง */
+    if (livePlaybackMode) return
     if (userSeekedAt && Date.now() - userSeekedAt < USER_SEEK_COOLDOWN) return
     try {
       const duration = player.getDuration()
