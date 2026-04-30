@@ -124,8 +124,19 @@
       console.warn('[Player] autoplay blocked by browser')
     }
     if (event.data === 1) {
-      // ผูก PLAYING เฉพาะวิดีโอที่คิวถืออยู่ กันสถานะค้างหลัง loadVideoById
-      if (currentQueueId && currentSong?.queue_id === currentQueueId) {
+      let playerVideoId = null
+      try {
+        playerVideoId = player.getVideoData()?.video_id ?? null
+      } catch (_) {
+        playerVideoId = null
+      }
+      // เมื่อ broadcast หรือโหลดคิวใหม่ คิวอัปเดตเป็นเพลงใหม่เร็วกว่า iframe สลับ — ผูก PLAYING เฉพาะเมื่อ id ใน player ตรงกับรายการคิว
+      const queueAligned = !!(currentQueueId && currentSong?.queue_id === currentQueueId)
+      let vidAligned = true
+      if (playerVideoId != null && currentSong?.id) {
+        vidAligned = playerVideoId === currentSong.id
+      }
+      if (queueAligned && vidAligned) {
         trackPlaybackEverStarted = true
       }
       needsResume = false
