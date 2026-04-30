@@ -15,6 +15,8 @@
   let userSeekedAt = 0
   let isUserPaused = false
   let songEndedSent = false
+  /** ENDED มักถูกยิงตอนสลับวิดีโอ — ยอมให้ส่ง song_ended ได้เฉพาะเมื่อเคย PLAYING จริงหลัง load แทร็คนี้ */
+  let trackPlaybackEverStarted = false
   let originalVolume = null
   let loadingVideo = false
   let isLiveVideo = false
@@ -98,8 +100,8 @@
   function handleStateChange(event) {
     // YT.PlayerState: -1=UNSTARTED, 0=ENDED, 1=PLAYING, 2=PAUSED, 3=BUFFERING, 5=CUED
     if (event.data === 0) {
-      console.info('[Player] video ended, queue_id:', currentQueueId)
-      if (currentQueueId && ws && !songEndedSent) {
+      console.info('[Player] video ended, queue_id:', currentQueueId, 'playbackStarted:', trackPlaybackEverStarted)
+      if (currentQueueId && ws && !songEndedSent && trackPlaybackEverStarted) {
         songEndedSent = true
         try {
           ws.send('song_ended', { song_id: currentQueueId })
@@ -122,6 +124,10 @@
       console.warn('[Player] autoplay blocked by browser')
     }
     if (event.data === 1) {
+      // ผูก PLAYING เฉพาะวิดีโอที่คิวถืออยู่ กันสถานะค้างหลัง loadVideoById
+      if (currentQueueId && currentSong?.queue_id === currentQueueId) {
+        trackPlaybackEverStarted = true
+      }
       needsResume = false
       isUserPaused = false
       loadingVideo = false
@@ -151,8 +157,9 @@
 
   function loadVideo(videoId, queueId) {
     if (!player || !isPlayerReady) return
-    currentQueueId = queueId
+    trackPlaybackEverStarted = false
     songEndedSent = false
+    currentQueueId = queueId
     loadingVideo = true
     isLiveVideo = currentSong?.is_live === true
     // block seek_sync 5 วินาทีหลังโหลดวิดีโอใหม่ ป้องกัน stale seek_sync จาก SeekTicker race
