@@ -5,16 +5,19 @@
 
   export let ws = null
 
-  let padPlayerContainer
-  let padPlayer = null
-  let isPadReady = false
+  let padHostEl
   let editingSlot = null
   let editUrl = ''
-  let playingSlot = null
-  let playingUserId = null
+  let playingSlots = new Set()
+  let playingUsers = {}
   let savingSlot = false
-  let pendingPadPlay = null
   let historyExpanded = false
+
+  // slot → { player, ready, pending: videoId|null }
+  let players = {}
+  let ytReady = false
+  // plays queued before YT API loaded
+  let pendingBySlot = {}
 
   function getUserLabel(userId) {
     if (!userId) return null
@@ -46,56 +49,79 @@
     return data.title || ''
   }
 
+  function cleanupSlot(slot) {
+    const entry = players[slot]
+    if (entry) {
+      try { entry.player.destroy() } catch {}
+      delete players[slot]
+    }
+    playingSlots.delete(slot)
+    delete playingUsers[slot]
+    playingSlots = new Set(playingSlots)
+    if (playingSlots.size === 0) soundPadActive.set(false)
+  }
+
+  function startSlotPlayer(slot, videoId) {
+    if (players[slot]) {
+      const entry = players[slot]
+      if (entry.ready) {
+        try {
+          entry.player.loadVideoById({ videoId, startSeconds: 0 })
+          entry.player.playVideo()
+        } catch (err) {
+          console.error('[SoundPad] play error:', err)
+          cleanupSlot(slot)
+        }
+      } else {
+        entry.pending = videoId
+      }
+      return
+    }
+
+    const div = document.createElement('div')
+    padHostEl.appendChild(div)
+    const entry = { player: null, ready: false, pending: null }
+    players[slot] = entry
+
+    entry.player = new window.YT.Player(div, {
+      height: '1',
+      width: '1',
+      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+      events: {
+        onReady: () => {
+          entry.ready = true
+          const vid = entry.pending ?? videoId
+          entry.pending = null
+          try {
+            entry.player.loadVideoById({ videoId: vid, startSeconds: 0 })
+            entry.player.playVideo()
+          } catch (err) {
+            console.error('[SoundPad] play error:', err)
+            cleanupSlot(slot)
+          }
+        },
+        onStateChange: (e) => {
+          if (e.data === 0) cleanupSlot(slot)
+        },
+      },
+    })
+  }
+
   function playPadVideo(detail) {
     const d = detail || {}
     const videoId = d.video_id ?? d.videoId
     const slot = d.slot
     if (videoId == null || slot == null) return
-    playingSlot = slot
-    playingUserId = d.user_id ?? null
-    if (!isPadReady || !padPlayer) {
-      pendingPadPlay = detail
+
+    playingUsers[slot] = d.user_id ?? null
+    playingSlots = new Set([...playingSlots, slot])
+    soundPadActive.set(true)
+
+    if (!ytReady) {
+      pendingBySlot[slot] = videoId
       return
     }
-    try {
-      padPlayer.loadVideoById({ videoId, startSeconds: 0 })
-      padPlayer.playVideo()
-      pendingPadPlay = null
-      soundPadActive.set(true)
-    } catch (err) {
-      console.error('[SoundPad] play error:', err)
-      showToast('Could not play sound pad', 'error')
-      playingSlot = null
-      pendingPadPlay = null
-      soundPadActive.set(false)
-    }
-  }
-
-  function initPadPlayer() {
-    if (padPlayer || !padPlayerContainer) return
-    padPlayer = new window.YT.Player(padPlayerContainer, {
-      height: '1',
-      width: '1',
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        rel: 0,
-        modestbranding: 1,
-      },
-      events: {
-        onReady: () => {
-          isPadReady = true
-          if (pendingPadPlay) playPadVideo(pendingPadPlay)
-        },
-        onStateChange: (e) => {
-          if (e.data === 0) {
-            playingSlot = null
-            playingUserId = null
-            soundPadActive.set(false)
-          }
-        },
-      },
-    })
+    startSlotPlayer(slot, videoId)
   }
 
   function onSoundPadPlay(e) {
@@ -103,15 +129,14 @@
   }
 
   function handleStop() {
-    if (padPlayer && isPadReady) {
-      try {
-        padPlayer.pauseVideo()
-      } catch (err) {
-        console.warn('[SoundPad] stop error:', err)
-      }
+    for (const slot of Object.keys(players)) {
+      const entry = players[slot]
+      try { entry.player.pauseVideo() } catch {}
+      try { entry.player.destroy() } catch {}
     }
-    playingSlot = null
-    playingUserId = null
+    players = {}
+    playingSlots = new Set()
+    playingUsers = {}
     soundPadActive.set(false)
   }
 
@@ -189,7 +214,11 @@
     window.addEventListener('soundpad:play', onSoundPadPlay)
 
     function boot() {
-      initPadPlayer()
+      ytReady = true
+      for (const [slot, videoId] of Object.entries(pendingBySlot)) {
+        delete pendingBySlot[slot]
+        startSlotPlayer(parseInt(slot), videoId)
+      }
     }
 
     if (window.YT && window.YT.Player) {
@@ -211,13 +240,7 @@
   onDestroy(() => {
     soundPadActive.set(false)
     window.removeEventListener('soundpad:play', onSoundPadPlay)
-    if (padPlayer) {
-      try {
-        padPlayer.destroy()
-      } catch (err) {
-        console.warn('[SoundPad] destroy error:', err)
-      }
-    }
+    handleStop()
   })
 </script>
 
@@ -227,9 +250,9 @@
     <button type="button" class="stop-btn" on:click={handleStop}>Stop</button>
   </div>
 
-  <!-- ต้องอยู่ใน DOM เสมอ (ไม่ห่อด้วย {#if}) -->
+  <!-- ต้องอยู่ใน DOM เสมอ — YT player iframes ถูก append เข้ามาที่นี่ -->
   <div
-    bind:this={padPlayerContainer}
+    bind:this={padHostEl}
     class="sound-pad-yt-host"
     aria-hidden="true"
   ></div>
@@ -238,7 +261,7 @@
     {#each $soundPad as cell, i (i)}
       <div
         class="slot"
-        class:playing={playingSlot === i}
+        class:playing={playingSlots.has(i)}
         class:empty={!cell}
       >
         {#if editingSlot === i}
@@ -291,8 +314,8 @@
               loading="lazy"
             />
             <span class="slot-title">{cell.title || cell.video_id}</span>
-            {#if playingSlot === i && getUserLabel(playingUserId)}
-              <span class="playing-user">{getUserLabel(playingUserId)}</span>
+            {#if playingSlots.has(i) && getUserLabel(playingUsers[i])}
+              <span class="playing-user">{getUserLabel(playingUsers[i])}</span>
             {/if}
             <button
               type="button"
