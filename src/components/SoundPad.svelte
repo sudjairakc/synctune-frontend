@@ -105,9 +105,7 @@
   function handleStop() {
     if (padPlayer && isPadReady) {
       try {
-        padPlayer.setVolume(0)
-        padPlayer.stopVideo()
-        padPlayer.setVolume(100)
+        padPlayer.pauseVideo()
       } catch (err) {
         console.warn('[SoundPad] stop error:', err)
       }

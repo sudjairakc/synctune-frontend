@@ -22,6 +22,12 @@
   let showEmojiPicker = false
   let reactingMsgId = null   // message ID showing reaction picker
 
+  // Image lightbox
+  let lightboxSrc = null
+  function openLightbox(src) { lightboxSrc = src }
+  function closeLightbox() { lightboxSrc = null }
+  function handleLightboxKey(e) { if (e.key === 'Escape') closeLightbox() }
+
   // Pinned bar
   let pinsExpanded = false
 
@@ -299,7 +305,9 @@
                     <span class="msg-text">{msg.text}</span>
                   {/if}
                   {#if msg.image_url}
-                    <img class="msg-image" src={msg.image_url} alt="" role="presentation" loading="lazy" />
+                    <button class="msg-image-btn" on:click={() => openLightbox(msg.image_url)}>
+                      <img class="msg-image" src={msg.image_url} alt="" loading="lazy" />
+                    </button>
                   {/if}
                 {/if}
                 <span class="msg-time">{formatTime(msg.timestamp)}</span>
@@ -395,7 +403,7 @@
                   {#if msg.deleted}<span class="msg-deleted">deleted</span>
                   {:else}
                     {#if msg.text}<span class="msg-text">{msg.text}</span>{/if}
-                    {#if msg.image_url}<img class="msg-image" src={msg.image_url} alt="img" loading="lazy" />{/if}
+                    {#if msg.image_url}<button class="msg-image-btn" on:click={() => openLightbox(msg.image_url)}><img class="msg-image" src={msg.image_url} alt="img" loading="lazy" /></button>{/if}
                   {/if}
                   <span class="msg-time">{formatTime(msg.timestamp)}</span>
                 </div>
@@ -488,6 +496,15 @@
   {/if}
   <VoicePTT {ws} />
 </div>
+
+{#if lightboxSrc}
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="lightbox-overlay" on:click={closeLightbox} on:keydown={handleLightboxKey} tabindex="-1">
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+    <img class="lightbox-img" src={lightboxSrc} alt="" on:click|stopPropagation />
+    <button class="lightbox-close" on:click={closeLightbox}>✕</button>
+  </div>
+{/if}
 
 <style>
   .chat {
@@ -1091,4 +1108,41 @@
   }
 
   .char-count.warn { color: #ff9800; }
+
+  .msg-image-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+  }
+
+  .lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .lightbox-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+  }
 </style>

@@ -45,8 +45,11 @@
   import TutorialTooltip from './components/TutorialTooltip.svelte'
   import LegalModal from './components/LegalModal.svelte'
   import SoundPad from './components/SoundPad.svelte'
+  import SupportMe from './components/SupportMe.svelte'
+  import AdminPanel from './components/AdminPanel.svelte'
 
   let legalOpen = false;
+  let adminOpen = false;
   let legalTab = 'terms';
 
   function openLegal(tab) {
@@ -149,8 +152,8 @@
           Disconnected
         {/if}
       </div>
-      <button class="icon-btn" on:click={toggleSound} title={soundEnabled ? 'Mute' : 'Unmute'} aria-label="toggle sound">
-        {soundEnabled ? '🔔' : '🔕'}
+      <button class="icon-btn" on:click={toggleSound} title={$soundEnabled ? 'Mute' : 'Unmute'} aria-label="toggle sound">
+        {$soundEnabled ? '🔔' : '🔕'}
       </button>
       <button class="theme-toggle" on:click={toggleTheme} title="Toggle theme" aria-label="Toggle light/dark mode" data-tutorial="theme">
         {theme === 'dark' ? '☀️' : '🌙'}
@@ -160,6 +163,7 @@
           Leave
         </button>
       {/if}
+      <button class="icon-btn" on:click={() => adminOpen = true} title="Admin Panel" aria-label="Admin Panel">⚙️</button>
     </div>
   </header>
 
@@ -179,8 +183,18 @@
       <div class="history-section" data-tutorial="history-section">
         <History {ws} />
       </div>
+      <SupportMe />
     </div>
   </main>
+
+  {#if adminOpen}
+    <div class="admin-overlay" role="dialog" aria-modal="true">
+      <div class="admin-drawer">
+        <button class="admin-close" on:click={() => adminOpen = false}>✕</button>
+        <AdminPanel />
+      </div>
+    </div>
+  {/if}
 
   <footer class="app-footer">
     <span>Made with ❤️ by</span>
@@ -559,4 +573,36 @@
       max-width: none;
     }
   }
+  .admin-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 500;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .admin-drawer {
+    width: min(640px, 100vw);
+    height: 100%;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+    position: relative;
+  }
+
+  .admin-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  .admin-close:hover { color: var(--text-primary); }
 </style>

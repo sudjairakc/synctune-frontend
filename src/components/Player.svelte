@@ -155,7 +155,8 @@
     songEndedSent = false
     loadingVideo = true
     isLiveVideo = currentSong?.is_live === true
-    userSeekedAt = 0
+    // block seek_sync 5 วินาทีหลังโหลดวิดีโอใหม่ ป้องกัน stale seek_sync จาก SeekTicker race
+    userSeekedAt = Date.now()
     // startSeconds ทำให้ video เริ่มที่ตำแหน่งที่ถูกต้องทันที (ไม่ต้องรอ seek_sync)
     // ไม่ส่ง startSeconds ถ้าเป็น 0 เพื่อให้ live stream เล่นจาก live edge
     const startSeconds = $seekTime > 0 ? $seekTime : undefined
