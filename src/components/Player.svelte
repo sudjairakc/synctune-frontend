@@ -212,11 +212,22 @@
     if (userSeekedAt && Date.now() - userSeekedAt < USER_SEEK_COOLDOWN) return
     try {
       const duration = player.getDuration()
+      const clientSeek = player.getCurrentTime()
+      // DVR: is_live จาก URL ไม่ครอบคลุม watch?v= บางสตรีม — เลขห้อง tick จาก 0 แต่ currentTime ของ YouTube เป็นชม.หลังจุดเริ่มสตรีม → ห้าม seek ถอย
+      if (
+        !livePlaybackMode &&
+        serverSeek <= 45 &&
+        clientSeek >= 300 &&
+        clientSeek - serverSeek >= 240
+      ) {
+        isLiveVideo = true
+        console.info('[Player] inferred live/DVR (player time >> room seek); skip server sync')
+        return
+      }
       if (!duration || serverSeek >= duration) {
         console.warn('[Player] seek skipped: serverSeek', serverSeek, '>=', duration, 's')
         return
       }
-      const clientSeek = player.getCurrentTime()
       const drift = Math.abs(clientSeek - serverSeek)
       if (drift > SEEK_DRIFT_THRESHOLD) {
         player.seekTo(serverSeek, true)
