@@ -138,6 +138,11 @@
     border: 1px solid var(--border);
   }
 
+  .song-list {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
   h3 {
     margin: 0 0 12px 0;
     color: var(--text-secondary);

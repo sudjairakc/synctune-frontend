@@ -1,5 +1,5 @@
 # CLAUDE.md — synctune-frontend
-## Svelte Frontend · Vite · YouTube IFrame API
+## Svelte Frontend · Vite · YouTube IFrame API · v1.0.0
 
 Read this file before doing any work in this repo.
 

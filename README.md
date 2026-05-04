@@ -2,6 +2,8 @@
 
 > ⚠️ **Experimental project** — built for personal learning and exploration. Not intended for commercial use.
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+
 A Svelte frontend for SyncTune — a real-time collaborative music listening app. Create a room, add YouTube videos to a shared queue, and listen in sync with friends. No account required.
 
 **Live:** https://synctune-frontend.vercel.app
@@ -146,6 +148,23 @@ synctune-frontend/
 docker build -t synctune-frontend .
 docker run -d --name synctune-frontend -p 80:80 synctune-frontend
 ```
+
+---
+
+## Changelog
+
+### v1.0.0 (2026-05-04)
+- Initial release
+- Real-time sync queue, playback, and chat via WebSocket
+- Multi-room support with 6-digit Room ID
+- YouTube IFrame API integration with seek guard
+- Drag & drop queue reorder
+- Autoplay / Shuffle / Random playback modes
+- Dark/Light theme toggle
+- Sound notifications via Web Audio API
+- SoundPad feature for quick sound effects
+- Song suggestions panel
+- Docker + Vercel deployment support
 
 ---
 

@@ -2,6 +2,7 @@
   import { afterUpdate, onMount, onDestroy } from 'svelte'
   import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker, pinnedMessages } from '$lib/stores.js'
   import VoicePTT from './VoicePTT.svelte'
+  import Suggestions from './Suggestions.svelte'
 
   export let ws = null
 
@@ -442,6 +443,8 @@
       <button class="img-remove" on:click={removeImage}>✕</button>
     </div>
   {/if}
+
+  <Suggestions {ws} />
 
   <!-- Input row -->
   <div class="chat-input-row" role="group" aria-label="Message input" on:click|stopPropagation on:keydown|stopPropagation>

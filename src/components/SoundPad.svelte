@@ -13,6 +13,25 @@
   let savingSlot = false
   let historyExpanded = false
 
+  let copyingSlot = null
+  let holdTimer = null
+
+  function onSlotPointerDown(e, i, videoId) {
+    holdTimer = setTimeout(() => {
+      holdTimer = null
+      const url = `https://www.youtube.com/watch?v=${videoId}`
+      navigator.clipboard.writeText(url).then(() => {
+        copyingSlot = i
+        setTimeout(() => { copyingSlot = null }, 1200)
+      })
+    }, 500)
+  }
+
+  function onSlotPointerUp() {
+    clearTimeout(holdTimer)
+    holdTimer = null
+  }
+
   // slot → { player, ready, pending: videoId|null }
   let players = {}
   let ytReady = false
@@ -300,6 +319,9 @@
             role="button"
             tabindex="0"
             on:click={() => onSlotClick(i)}
+            on:pointerdown={(e) => onSlotPointerDown(e, i, cell.video_id)}
+            on:pointerup={onSlotPointerUp}
+            on:pointerleave={onSlotPointerUp}
             on:keydown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
@@ -307,6 +329,9 @@
               }
             }}
           >
+            {#if copyingSlot === i}
+              <span class="copy-tooltip">Copied!</span>
+            {/if}
             <img
               class="thumb"
               src={THUMB(cell.video_id)}
@@ -478,6 +503,22 @@
 
   .slot-filled:hover {
     background: var(--bg-hover);
+  }
+
+  .copy-tooltip {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
   }
 
   .thumb {

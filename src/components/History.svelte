@@ -92,6 +92,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    max-height: 280px;
+    overflow-y: auto;
   }
 
   .history-item {

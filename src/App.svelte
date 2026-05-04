@@ -51,6 +51,14 @@
   let legalOpen = false;
   let adminOpen = false;
   let legalTab = 'terms';
+  let roomCopied = false;
+
+  function copyRoomId() {
+    navigator.clipboard.writeText($currentRoom).then(() => {
+      roomCopied = true
+      setTimeout(() => { roomCopied = false }, 1200)
+    })
+  }
 
   function openLegal(tab) {
     legalTab = tab;
@@ -128,10 +136,10 @@
         <button
           class="room-badge"
           title="Click to copy Room ID"
-          on:click={() => navigator.clipboard.writeText($currentRoom)}
+          on:click={copyRoomId}
           data-tutorial="room"
         >
-          #{$currentRoom}
+          {#if roomCopied}Copied!{:else}#{$currentRoom}{/if}
         </button>
       {/if}
     </div>
@@ -178,10 +186,12 @@
     </div>
 
     <div class="sidebar">
-      <div data-tutorial="add-song"><AddSong {ws} /></div>
-      <div data-tutorial="queue-section"><Queue {ws} /></div>
-      <div class="history-section" data-tutorial="history-section">
-        <History {ws} />
+      <div class="sidebar-scroll">
+        <div data-tutorial="add-song"><AddSong {ws} /></div>
+        <div data-tutorial="queue-section"><Queue {ws} /></div>
+        <div class="history-section" data-tutorial="history-section">
+          <History {ws} />
+        </div>
       </div>
       <SupportMe />
     </div>
@@ -447,7 +457,7 @@
     margin: 0 auto;
     width: 100%;
     flex: 1;
-    align-items: start;
+    align-items: stretch;
   }
 
   .player-section {
@@ -459,10 +469,17 @@
   .sidebar {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+  }
+
+  .sidebar-scroll {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
     overflow-y: auto;
-    max-height: calc(100vh - 70px);
-    min-width: 0;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 16px;
   }
 
   .history-section { flex-shrink: 0; }
