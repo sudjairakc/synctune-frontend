@@ -120,7 +120,8 @@
           }
         },
         onStateChange: (e) => {
-          if (e.data === 0) cleanupSlot(slot)
+          if (e.data === 0) cleanupSlot(slot) // ENDED
+          if (e.data === 2) cleanupSlot(slot) // PAUSED = autoplay blocked by browser
         },
       },
     })

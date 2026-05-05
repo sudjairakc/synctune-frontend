@@ -94,7 +94,14 @@ export function createWebSocket(url) {
         shuffle.set(payload.shuffle ?? false)
         randomPlay.set(payload.random_play ?? false)
         if (payload.chat_history != null) chatHistory.set(payload.chat_history)
-        if (payload.online_users != null) onlineUsers.set(payload.online_users)
+        if (payload.online_users != null) {
+          onlineUsers.set(payload.online_users)
+          const me = get(currentUser)
+          if (me && me.id == null) {
+            const serverMe = payload.online_users.find(u => u.username === me.username)
+            if (serverMe) currentUser.set({ ...me, id: serverMe.id, profile_img: serverMe.profile_img || me.profile_img })
+          }
+        }
         if (payload.sound_pad != null) soundPad.set(normalizeSoundPad(payload.sound_pad))
         if (payload.playback_speed != null) playbackSpeed.set(payload.playback_speed)
         if (payload.soundpad_history != null) soundpadHistory.set(payload.soundpad_history)
