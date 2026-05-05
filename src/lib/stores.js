@@ -65,3 +65,6 @@ export const soundpadHistory = writable([])
 
 // pinnedMessages — ข้อความที่ถูก pin ในห้อง (newest first, max 20)
 export const pinnedMessages = writable([])
+
+// topSpenders — รายการ top spenders (merged by name, sorted by amount desc)
+export const topSpenders = writable([])

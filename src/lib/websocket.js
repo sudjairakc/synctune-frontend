@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -179,6 +179,10 @@ export function createWebSocket(url) {
 
       case 'pins_updated':
         pinnedMessages.set(payload.pins ?? [])
+        break
+
+      case 'top_spenders_updated':
+        topSpenders.set((payload.spenders ?? []).sort((a, b) => b.amount - a.amount))
         break
 
       case 'playback_speed_updated':

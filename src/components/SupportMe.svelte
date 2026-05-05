@@ -1,15 +1,17 @@
 <script>
   import { onMount } from 'svelte'
+  import { topSpenders } from '$lib/stores.js'
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
   const qrUrl = `${API_URL}/qr/promptpay`
 
-  let spenders = []
-
   onMount(async () => {
     try {
       const res = await fetch(`${API_URL}/top-spenders`)
-      if (res.ok) spenders = (await res.json()).sort((a, b) => b.amount - a.amount)
+      if (res.ok) {
+        const data = await res.json()
+        topSpenders.set(data.sort((a, b) => b.amount - a.amount))
+      }
     } catch {}
   })
 </script>
@@ -22,13 +24,15 @@
   </div>
   <p class="support-note">PromptPay · เบอร์ 085-399-7206</p>
 
-  {#if spenders.length > 0}
+  {#if $topSpenders.length > 0}
     <div class="spenders-section">
       <p class="spenders-title">🏆 Top Spenders</p>
       <ul class="spenders-list">
-        {#each spenders as sp, i}
-          <li class="spender-item">
-            <span class="spender-rank">{i + 1}</span>
+        {#each $topSpenders as sp, i}
+          <li class="spender-item" class:top1={i === 0}>
+            <span class="spender-rank">
+              {#if i === 0}👑{:else if i === 1}🥈{:else if i === 2}🥉{:else}{i + 1}{/if}
+            </span>
             <span class="spender-name">{sp.name}</span>
             <span class="spender-amount">฿{sp.amount.toLocaleString()}</span>
           </li>
@@ -110,6 +114,13 @@
     padding: 4px 8px;
     background: var(--bg-elevated);
     border-radius: 6px;
+    border: 1px solid transparent;
+  }
+
+  .spender-item.top1 {
+    border-color: #f5c518;
+    box-shadow: 0 0 8px 2px rgba(245, 197, 24, 0.45);
+    background: linear-gradient(135deg, rgba(245, 197, 24, 0.08) 0%, var(--bg-elevated) 100%);
   }
 
   .spender-rank {
@@ -121,7 +132,6 @@
     flex-shrink: 0;
   }
 
-  .spender-item:nth-child(1) .spender-rank { color: #f5c518; }
   .spender-item:nth-child(2) .spender-rank { color: #a8a9ad; }
   .spender-item:nth-child(3) .spender-rank { color: #cd7f32; }
 
