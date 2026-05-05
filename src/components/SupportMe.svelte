@@ -1,6 +1,17 @@
 <script>
+  import { onMount } from 'svelte'
+
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
   const qrUrl = `${API_URL}/qr/promptpay`
+
+  let spenders = []
+
+  onMount(async () => {
+    try {
+      const res = await fetch(`${API_URL}/top-spenders`)
+      if (res.ok) spenders = await res.json()
+    } catch {}
+  })
 </script>
 
 <section class="support-section">
@@ -10,6 +21,20 @@
     <img src={qrUrl} alt="PromptPay QR" class="qr-img" />
   </div>
   <p class="support-note">PromptPay · เบอร์ 085-399-7206</p>
+
+  {#if spenders.length > 0}
+    <div class="spenders-section">
+      <p class="spenders-title">🏆 Top Spenders</p>
+      <ul class="spenders-list">
+        {#each spenders as sp}
+          <li class="spender-item">
+            <span class="spender-name">{sp.name}</span>
+            <span class="spender-amount">฿{sp.amount.toLocaleString()}</span>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -52,5 +77,46 @@
     margin: 12px 0 0;
     font-size: 0.75rem;
     color: var(--text-muted);
+  }
+
+  .spenders-section {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+
+  .spenders-title {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .spenders-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .spender-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background: var(--bg-elevated);
+    border-radius: 6px;
+  }
+
+  .spender-name {
+    color: var(--text-primary);
+  }
+
+  .spender-amount {
+    color: var(--accent);
+    font-weight: 600;
   }
 </style>

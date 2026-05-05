@@ -17,6 +17,11 @@
   let scheduleForm = { id: '', cron_expr: '', youtube_url: '', label: '', enabled: true }
   let editingSchedule = false
 
+  // top spenders
+  let spenders = []
+  let spenderForm = { id: '', name: '', amount: '', date: '' }
+  let editingSpender = false
+
   async function api(method, path, body) {
     const res = await fetch(`${API_URL}${path}`, {
       method,
@@ -45,7 +50,7 @@
   }
 
   async function loadAll() {
-    await Promise.all([loadStats(), loadRooms(), loadSchedules()])
+    await Promise.all([loadStats(), loadRooms(), loadSchedules(), loadSpenders()])
   }
 
   async function loadStats() {
@@ -131,6 +136,51 @@
       alert(e.message)
     }
   }
+
+  async function loadSpenders() {
+    spenders = await api('GET', '/admin/top-spenders')
+  }
+
+  function startAddSpender() {
+    const today = new Date().toISOString().slice(0, 10)
+    spenderForm = { id: '', name: '', amount: '', date: today }
+    editingSpender = true
+  }
+
+  function startEditSpender(sp) {
+    spenderForm = { ...sp, amount: String(sp.amount) }
+    editingSpender = true
+  }
+
+  async function saveSpender() {
+    const amount = parseInt(spenderForm.amount)
+    if (!spenderForm.name || isNaN(amount) || amount <= 0 || !spenderForm.date) {
+      alert('กรอกชื่อ, ยอดเงิน (บาท) และวันที่ให้ครบ')
+      return
+    }
+    try {
+      const payload = { ...spenderForm, amount }
+      if (spenderForm.id) {
+        await api('PUT', '/admin/top-spenders', payload)
+      } else {
+        await api('POST', '/admin/top-spenders', payload)
+      }
+      editingSpender = false
+      await loadSpenders()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  async function deleteSpender(id) {
+    if (!confirm('ลบรายการนี้?')) return
+    try {
+      await api('DELETE', `/admin/top-spenders?id=${id}`)
+      await loadSpenders()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
 </script>
 
 {#if !authed}
@@ -159,6 +209,7 @@
       <button class:active={activeTab === 'dashboard'} on:click={() => activeTab = 'dashboard'}>Dashboard</button>
       <button class:active={activeTab === 'rooms'} on:click={() => { activeTab = 'rooms'; loadRooms() }}>Rooms & Users</button>
       <button class:active={activeTab === 'schedules'} on:click={() => { activeTab = 'schedules'; loadSchedules() }}>Schedules</button>
+      <button class:active={activeTab === 'spenders'} on:click={() => { activeTab = 'spenders'; loadSpenders() }}>Top Spenders</button>
     </div>
 
     <!-- Dashboard -->
@@ -253,6 +304,46 @@
                   <button class="btn-sm" on:click={() => triggerNow(s.youtube_url)}>▶ Now</button>
                   <button class="btn-sm" on:click={() => startEditSchedule(s)}>Edit</button>
                   <button class="btn-sm btn-danger-sm" on:click={() => deleteSchedule(s.id)}>Del</button>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+    {/if}
+    <!-- Top Spenders -->
+    {#if activeTab === 'spenders'}
+      <div class="schedule-toolbar">
+        <button class="btn-primary" on:click={startAddSpender}>+ Add Spender</button>
+      </div>
+
+      {#if editingSpender}
+        <div class="schedule-form">
+          <h3>{spenderForm.id ? 'Edit' : 'Add'} Top Spender</h3>
+          <label>ชื่อ <input bind:value={spenderForm.name} placeholder="ชื่อผู้สนับสนุน" /></label>
+          <label>ยอดเงิน (บาท) <input type="number" bind:value={spenderForm.amount} placeholder="100" min="1" /></label>
+          <label>วันที่ <input type="date" bind:value={spenderForm.date} /></label>
+          <div class="form-actions">
+            <button class="btn-primary" on:click={saveSpender}>Save</button>
+            <button class="btn-secondary" on:click={() => editingSpender = false}>Cancel</button>
+          </div>
+        </div>
+      {/if}
+
+      {#if spenders.length === 0 && !editingSpender}
+        <p class="empty">ยังไม่มีรายการ Top Spender</p>
+      {:else}
+        <table class="schedule-table">
+          <thead><tr><th>ชื่อ</th><th>ยอดเงิน</th><th>วันที่</th><th></th></tr></thead>
+          <tbody>
+            {#each spenders as sp}
+              <tr>
+                <td>{sp.name}</td>
+                <td>฿{sp.amount.toLocaleString()}</td>
+                <td>{sp.date}</td>
+                <td class="actions">
+                  <button class="btn-sm" on:click={() => startEditSpender(sp)}>Edit</button>
+                  <button class="btn-sm btn-danger-sm" on:click={() => deleteSpender(sp.id)}>Del</button>
                 </td>
               </tr>
             {/each}
