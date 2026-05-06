@@ -111,6 +111,11 @@
           entry.ready = true
           const vid = entry.pending ?? videoId
           entry.pending = null
+          // page อาจ hidden ตอน onReady fire — ให้ cleanup แทนที่จะเล่น
+          if (document.hidden) {
+            cleanupSlot(slot)
+            return
+          }
           try {
             entry.player.loadVideoById({ videoId: vid, startSeconds: 0 })
             entry.player.playVideo()
@@ -132,6 +137,9 @@
     const videoId = d.video_id ?? d.videoId
     const slot = d.slot
     if (videoId == null || slot == null) return
+    // ถ้า page ซ่อนอยู่ browser จะ block autoplay และ queue playVideo() ไว้
+    // พอ page กลับมา visible จะเล่นเสียงค้างที่ไม่ควรเล่นแล้ว
+    if (document.hidden) return
 
     playingUsers[slot] = d.user_id ?? null
     playingSlots = new Set([...playingSlots, slot])
