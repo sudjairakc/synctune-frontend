@@ -230,13 +230,26 @@ export function createWebSocket(url) {
         break
 
       case 'room_action': {
-        const actionLabels = {
-          remove_song: (p) => `🗑 ${p.by_username} removed "${p.detail}"`,
-          reorder_queue: (p) => `↕️ ${p.by_username} reordered "${p.detail}"`,
-          soundpad_stop: (p) => `🔇 ${p.by_username} stopped the sound`,
-          set_playback_mode: (p) => `🎛 ${p.by_username} changed ${p.detail}`,
+        // soundpad actions → log ใน SoundPad component ไม่ใช่ toast
+        const soundpadActions = new Set(['soundpad_set', 'soundpad_clear', 'soundpad_stop'])
+        if (soundpadActions.has(payload.action)) {
+          soundpadHistory.update(h => [{
+            type: payload.action,
+            title: payload.detail || '',
+            by_username: payload.by_username,
+            timestamp: Date.now(),
+          }, ...h].slice(0, 100))
+          break
         }
-        const fmt = actionLabels[payload.action]
+        // queue actions → toast
+        const queueLabels = {
+          remove_song:        (p) => `🗑 ${p.by_username} removed "${p.detail}"`,
+          skip_song:          (p) => `⏭ ${p.by_username} skipped "${p.detail}"`,
+          reorder_queue:      (p) => `↕️ ${p.by_username} reordered "${p.detail}"`,
+          set_playback_mode:  (p) => `🎛 ${p.by_username} changed ${p.detail}`,
+          set_playback_speed: (p) => `⚡ ${p.by_username} set speed to ${p.detail}`,
+        }
+        const fmt = queueLabels[payload.action]
         if (fmt) showToast(fmt(payload), 'info', 3000)
         break
       }
@@ -246,17 +259,15 @@ export function createWebSocket(url) {
         const pad = get(soundPad)
         const padCell = pad[payload.slot]
         const me = get(currentUser)
-        soundpadHistory.update(h => {
-          const entry = {
-            slot: payload.slot,
-            video_id: payload.video_id,
-            title: padCell?.title || payload.video_id,
-            played_by: me?.id === payload.user_id ? me.username : (get(onlineUsers).find(u => u.id === payload.user_id)?.username ?? 'Unknown'),
-            user_id: payload.user_id,
-            timestamp: Date.now(),
-          }
-          return [entry, ...h].slice(0, 100)
-        })
+        soundpadHistory.update(h => [{
+          type: 'play',
+          slot: payload.slot,
+          video_id: payload.video_id,
+          title: padCell?.title || payload.video_id,
+          by_username: me?.id === payload.user_id ? me.username : (get(onlineUsers).find(u => u.id === payload.user_id)?.username ?? 'Unknown'),
+          user_id: payload.user_id,
+          timestamp: Date.now(),
+        }, ...h].slice(0, 100))
         break
       }
 

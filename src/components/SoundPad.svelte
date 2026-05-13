@@ -426,15 +426,35 @@
       </button>
       {#if historyExpanded}
         <div class="pad-history-list">
-          {#each $soundpadHistory.slice(0, 10) as entry (entry.timestamp + entry.user_id)}
+          {#each $soundpadHistory.slice(0, 20) as entry (entry.timestamp)}
             <div class="pad-history-row">
-              <img class="pad-history-thumb" src={THUMB(entry.video_id)} alt="" loading="lazy" />
-              <div class="pad-history-info">
-                <span class="pad-history-song">{entry.title}</span>
-                <span class="pad-history-meta">
-                  {entry.played_by} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
+              {#if entry.type === 'play' || !entry.type}
+                <img class="pad-history-thumb" src={THUMB(entry.video_id)} alt="" loading="lazy" />
+                <div class="pad-history-info">
+                  <span class="pad-history-song">▶ {entry.title}</span>
+                  <span class="pad-history-meta">
+                    {entry.by_username ?? entry.played_by} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              {:else if entry.type === 'soundpad_set'}
+                <span class="pad-history-icon">➕</span>
+                <div class="pad-history-info">
+                  <span class="pad-history-song">{entry.title || 'Untitled'}</span>
+                  <span class="pad-history-meta">{entry.by_username} added · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              {:else if entry.type === 'soundpad_clear'}
+                <span class="pad-history-icon">🗑</span>
+                <div class="pad-history-info">
+                  <span class="pad-history-song">{entry.title || 'Slot'}</span>
+                  <span class="pad-history-meta">{entry.by_username} removed · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              {:else if entry.type === 'soundpad_stop'}
+                <span class="pad-history-icon">🔇</span>
+                <div class="pad-history-info">
+                  <span class="pad-history-song">Stopped</span>
+                  <span class="pad-history-meta">{entry.by_username} · {new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              {/if}
             </div>
           {/each}
         </div>
@@ -754,6 +774,16 @@
     height: 27px;
     object-fit: cover;
     border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .pad-history-icon {
+    width: 36px;
+    height: 27px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
     flex-shrink: 0;
   }
 
