@@ -5,23 +5,30 @@
 
   export let ws = null
 
-  let padHostEl
+  // --- DOM refs ---
+  let padPlayerEl    // div ที่ผูกกับ YT.Player (always in DOM)
+
+  // --- YT player state ---
+  let soundpadPlayer = null
+  let soundpadReady = false
+
+  // --- playback state ---
+  let playingSlot = null   // slot ที่เล่นอยู่ (null = ไม่ได้เล่น)
+  let playingUserId = null
+  let audioBlocked = false // browser block autoplay รอ user click
+
+  // --- UI state ---
   let editingSlot = null
   let editUrl = ''
-  let playingSlots = new Set()
-  let playingUsers = {}
   let savingSlot = false
   let historyExpanded = false
-
-  let audioUnlocked = false
   let copyingSlot = null
   let holdTimer = null
 
   function onSlotPointerDown(e, i, videoId) {
     holdTimer = setTimeout(() => {
       holdTimer = null
-      const url = `https://www.youtube.com/watch?v=${videoId}`
-      navigator.clipboard.writeText(url).then(() => {
+      navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${videoId}`).then(() => {
         copyingSlot = i
         setTimeout(() => { copyingSlot = null }, 1200)
       })
@@ -33,196 +40,113 @@
     holdTimer = null
   }
 
-  // slot → { player, ready, pending: videoId|null }
-  let players = {}
-  let ytReady = false
-  // plays queued before YT API loaded
-  let pendingBySlot = {}
+  const THUMB = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`
 
   function getUserLabel(userId) {
     if (!userId) return null
     const me = $currentUser
     if (me && me.id === userId) return 'you'
-    const user = $onlineUsers.find(u => u.id === userId)
-    return user ? user.username : null
+    return $onlineUsers.find(u => u.id === userId)?.username ?? null
   }
 
-  const THUMB = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`
-
   function extractVideoId(url) {
-    const u = (url || '').trim()
-    const m = u.match(
+    const m = (url || '').trim().match(
       /(?:youtube\.com\/(?:watch\?(?:[^&]*&)*v=|shorts\/|embed\/)|youtu\.be\/|music\.youtube\.com\/watch\?(?:[^&]*&)*v=)([\w-]{11})/
     )
     return m ? m[1] : null
   }
 
-  function watchUrlForOembed(videoId) {
-    return `https://www.youtube.com/watch?v=${videoId}`
-  }
-
   async function fetchTitle(videoId) {
-    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrlForOembed(videoId))}&format=json`
-    const res = await fetch(oembedUrl)
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}&format=json`)
     if (!res.ok) throw new Error('Could not load video info')
-    const data = await res.json()
-    return data.title || ''
+    return (await res.json()).title || ''
   }
 
-  function unlockAudio() {
-    if (audioUnlocked) return
-    // สร้าง YT player เงียบชั่วคราวเพื่อ unlock autoplay policy ของ browser
-    const div = document.createElement('div')
-    padHostEl.appendChild(div)
-    const unlock = new window.YT.Player(div, {
-      height: '1', width: '1',
-      playerVars: { autoplay: 1, mute: 1, controls: 0 },
-      events: {
-        onReady: (e) => {
-          e.target.stopVideo()
-          e.target.destroy()
-          div.remove()
-          audioUnlocked = true
-        },
-      },
-    })
-  }
+  // --- YT player (single persistent instance, ไม่ destroy ตลอดชีวิต component) ---
 
-  function cleanupSlot(slot) {
-    const entry = players[slot]
-    if (entry) {
-      try { entry.player.destroy() } catch {}
-      delete players[slot]
-    }
-    playingSlots.delete(slot)
-    delete playingUsers[slot]
-    playingSlots = new Set(playingSlots)
-    if (playingSlots.size === 0) soundPadActive.set(false)
-  }
-
-  function stopAllSlots() {
-    for (const slot of Object.keys(players)) {
-      const entry = players[slot]
-      try { entry.player.pauseVideo() } catch {}
-      try { entry.player.destroy() } catch {}
-    }
-    players = {}
-    playingSlots = new Set()
-    playingUsers = {}
-    soundPadActive.set(false)
-  }
-
-  function startSlotPlayer(slot, videoId) {
-    // stop ทุก slot เก่าก่อนเสมอ (1 sound at a time)
-    stopAllSlots()
-
-    if (players[slot]) {
-      const entry = players[slot]
-      if (entry.ready) {
-        try {
-          entry.player.loadVideoById({ videoId, startSeconds: 0 })
-          entry.player.playVideo()
-        } catch (err) {
-          console.error('[SoundPad] play error:', err)
-          cleanupSlot(slot)
-        }
-      } else {
-        entry.pending = videoId
-      }
-      return
-    }
-
-    const div = document.createElement('div')
-    padHostEl.appendChild(div)
-    const entry = { player: null, ready: false, pending: null }
-    players[slot] = entry
-
-    entry.player = new window.YT.Player(div, {
+  function initSoundpadPlayer() {
+    soundpadPlayer = new window.YT.Player(padPlayerEl, {
       height: '1',
       width: '1',
-      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+      playerVars: { autoplay: 0, controls: 0, rel: 0 },
       events: {
-        onReady: () => {
-          entry.ready = true
-          const vid = entry.pending ?? videoId
-          entry.pending = null
-          // page อาจ hidden ตอน onReady fire — ให้ cleanup แทนที่จะเล่น
-          if (document.hidden) {
-            cleanupSlot(slot)
-            return
-          }
-          try {
-            entry.player.loadVideoById({ videoId: vid, startSeconds: 0 })
-            entry.player.playVideo()
-          } catch (err) {
-            console.error('[SoundPad] play error:', err)
-            cleanupSlot(slot)
-          }
-        },
+        onReady: () => { soundpadReady = true },
         onStateChange: (e) => {
-          if (e.data === 0) cleanupSlot(slot) // ENDED
-          if (e.data === 2) cleanupSlot(slot) // PAUSED = autoplay blocked by browser
+          if (e.data === 1) { // PLAYING
+            audioBlocked = false
+            soundPadActive.set(true)
+          } else if (e.data === 0) { // ENDED
+            playingSlot = null
+            playingUserId = null
+            audioBlocked = false
+            soundPadActive.set(false)
+          } else if (e.data === 2 && playingSlot !== null) { // PAUSED while we expect playing
+            audioBlocked = true
+          }
         },
       },
     })
   }
 
-  function playPadVideo(detail) {
-    const d = detail || {}
-    const videoId = d.video_id ?? d.videoId
+  function resumeBlockedAudio() {
+    // user gesture → browser อนุญาต audio
+    audioBlocked = false
+    try { soundpadPlayer?.playVideo() } catch {}
+  }
+
+  function stopSoundpad() {
+    playingSlot = null
+    playingUserId = null
+    audioBlocked = false
+    soundPadActive.set(false)
+    try { soundpadPlayer?.stopVideo() } catch {}
+  }
+
+  // รับ soundpad:play event จาก websocket.js
+  function onSoundPadPlay(e) {
+    const d = e.detail || {}
+    const videoId = d.video_id
     const slot = d.slot
     if (videoId == null || slot == null) return
     if (document.hidden) return
+    if (!soundpadReady) return
 
-    playingUsers[slot] = d.user_id ?? null
-    playingSlots = new Set([slot])
-    soundPadActive.set(true)
+    playingSlot = slot
+    playingUserId = d.user_id ?? null
+    audioBlocked = false
 
-    if (!ytReady) {
-      pendingBySlot = { [slot]: videoId }
-      return
+    try {
+      soundpadPlayer.loadVideoById({ videoId, startSeconds: 0 })
+      // loadVideoById จะ autoplay — ถ้า browser block จะยิง state=2 → audioBlocked=true
+    } catch (err) {
+      console.error('[SoundPad] play error:', err)
+      playingSlot = null
     }
-    startSlotPlayer(slot, videoId)
-  }
-
-  function onSoundPadPlay(e) {
-    playPadVideo(e.detail)
   }
 
   function onSoundPadStop() {
-    stopAllSlots()
+    stopSoundpad()
   }
 
   function handleStop() {
-    if (!ws) { stopAllSlots(); return }
+    if (!ws) { stopSoundpad(); return }
     try {
       ws.send('soundpad_stop', {})
     } catch (err) {
       console.error('[SoundPad] stop send failed:', err)
-      stopAllSlots()
+      stopSoundpad()
     }
   }
 
-  function openEdit(i) {
-    editingSlot = i
-    editUrl = ''
-  }
+  // --- slot edit/clear/play ---
 
-  function cancelEdit() {
-    editingSlot = null
-    editUrl = ''
-  }
+  function openEdit(i) { editingSlot = i; editUrl = '' }
+  function cancelEdit() { editingSlot = null; editUrl = '' }
 
   async function saveEdit(slot) {
     const id = extractVideoId(editUrl)
-    if (!id) {
-      showToast('Invalid YouTube URL', 'error')
-      return
-    }
-    if (!ws) {
-      showToast('Not connected', 'error')
-      return
-    }
+    if (!id) { showToast('Invalid YouTube URL', 'error'); return }
+    if (!ws) { showToast('Not connected', 'error'); return }
     savingSlot = true
     try {
       const title = await fetchTitle(id)
@@ -239,65 +163,40 @@
 
   function clearSlot(slot, ev) {
     ev?.stopPropagation()
-    if (!ws) {
-      showToast('Not connected', 'error')
-      return
-    }
-    try {
-      ws.send('soundpad_clear', { slot })
-    } catch (err) {
+    if (!ws) { showToast('Not connected', 'error'); return }
+    try { ws.send('soundpad_clear', { slot }) } catch (err) {
       console.error('[SoundPad] clear failed:', err)
-      showToast('Failed to clear slot', 'error')
     }
   }
 
   function playSlot(slot) {
-    if (!ws) {
-      showToast('Not connected', 'error')
-      return
-    }
-    const cell = $soundPad[slot]
-    if (!cell?.video_id) return
-    try {
-      ws.send('soundpad_play', { slot })
-    } catch (err) {
+    if (!ws) { showToast('Not connected', 'error'); return }
+    if (!$soundPad[slot]?.video_id) return
+    try { ws.send('soundpad_play', { slot }) } catch (err) {
       console.error('[SoundPad] play send failed:', err)
-      showToast('Failed to trigger play', 'error')
     }
   }
 
   function onSlotClick(i) {
     if (editingSlot === i) return
-    const cell = $soundPad[i]
-    if (cell) playSlot(i)
+    if ($soundPad[i]) playSlot(i)
     else openEdit(i)
   }
+
+  // --- lifecycle ---
 
   onMount(() => {
     window.addEventListener('soundpad:play', onSoundPadPlay)
     window.addEventListener('soundpad:stop', onSoundPadStop)
 
-    function boot() {
-      ytReady = true
-      unlockAudio()
-      for (const [slot, videoId] of Object.entries(pendingBySlot)) {
-        delete pendingBySlot[slot]
-        startSlotPlayer(parseInt(slot), videoId)
-      }
-    }
-
+    // YT API อาจโหลดแล้ว (จาก Player.svelte) หรือยังไม่โหลด
     if (window.YT && window.YT.Player) {
-      boot()
+      initSoundpadPlayer()
     } else {
       const prev = window.onYouTubeIframeAPIReady
       window.onYouTubeIframeAPIReady = function () {
         if (typeof prev === 'function') prev()
-        boot()
-      }
-      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-        const script = document.createElement('script')
-        script.src = 'https://www.youtube.com/iframe_api'
-        document.head.appendChild(script)
+        initSoundpadPlayer()
       }
     }
   })
@@ -306,7 +205,7 @@
     soundPadActive.set(false)
     window.removeEventListener('soundpad:play', onSoundPadPlay)
     window.removeEventListener('soundpad:stop', onSoundPadStop)
-    stopAllSlots()
+    try { soundpadPlayer?.destroy() } catch {}
   })
 </script>
 
@@ -314,25 +213,21 @@
   <div class="sound-pad-header">
     <h3 class="sound-pad-title">Sound Pad</h3>
     <div class="sound-pad-actions">
-      {#if !audioUnlocked}
-        <button type="button" class="unlock-btn" on:click={unlockAudio}>🔊 Enable audio</button>
+      {#if audioBlocked}
+        <button type="button" class="unlock-btn" on:click={resumeBlockedAudio}>🔊 Click to hear</button>
       {/if}
       <button type="button" class="stop-btn" on:click={handleStop}>Stop</button>
     </div>
   </div>
 
-  <!-- ต้องอยู่ใน DOM เสมอ — YT player iframes ถูก append เข้ามาที่นี่ -->
-  <div
-    bind:this={padHostEl}
-    class="sound-pad-yt-host"
-    aria-hidden="true"
-  ></div>
+  <!-- persistent YT player — ต้องอยู่ใน DOM เสมอ เหมือน main player -->
+  <div bind:this={padPlayerEl} class="sound-pad-yt-host" aria-hidden="true"></div>
 
   <div class="sound-pad-grid" role="group" aria-label="Sound pad slots">
     {#each $soundPad as cell, i (i)}
       <div
         class="slot"
-        class:playing={playingSlots.has(i)}
+        class:playing={i === playingSlot}
         class:empty={!cell}
       >
         {#if editingSlot === i}
@@ -365,7 +260,6 @@
             </div>
           </div>
         {:else if cell}
-          <!-- div แทน button ล้อม เพื่อไม่ให้ปุ่มลบซ้อนปุ่มหลัก -->
           <div
             class="slot-filled"
             role="button"
@@ -391,8 +285,8 @@
               loading="lazy"
             />
             <span class="slot-title">{cell.title || cell.video_id}</span>
-            {#if playingSlots.has(i) && getUserLabel(playingUsers[i])}
-              <span class="playing-user">{getUserLabel(playingUsers[i])}</span>
+            {#if i === playingSlot && getUserLabel(playingUserId)}
+              <span class="playing-user">{getUserLabel(playingUserId)}</span>
             {/if}
             <button
               type="button"

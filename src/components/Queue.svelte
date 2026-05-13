@@ -1,6 +1,6 @@
 <script>
   // 1. Imports
-  import { queue, currentIndex } from '$lib/stores.js'
+  import { queue, currentIndex, queueActivity } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -8,6 +8,7 @@
   // 3. Local State
   let dragFromIndex = null
   let dragOverIndex = null
+  let activityExpanded = false
 
   // 4. Derived
   $: isBroadcasting = $queue[$currentIndex]?.is_broadcast === true
@@ -72,6 +73,25 @@
     const s = seconds % 60
     return `${m}:${s.toString().padStart(2, '0')}`
   }
+
+  const activityIcon = {
+    remove_song:        '🗑',
+    skip_song:          '⏭',
+    reorder_queue:      '↕️',
+    set_playback_mode:  '🎛',
+    set_playback_speed: '⚡',
+  }
+
+  function activityText(entry) {
+    switch (entry.action) {
+      case 'remove_song':        return `removed "${entry.detail}"`
+      case 'skip_song':          return `skipped "${entry.detail}"`
+      case 'reorder_queue':      return `reordered "${entry.detail}"`
+      case 'set_playback_mode':  return `changed ${entry.detail}`
+      case 'set_playback_speed': return `set speed to ${entry.detail}`
+      default: return entry.detail
+    }
+  }
 </script>
 
 <div class="queue">
@@ -127,6 +147,28 @@
         </li>
       {/each}
     </ul>
+  {/if}
+
+  {#if $queueActivity.length > 0}
+    <div class="q-activity">
+      <button class="q-activity-toggle" on:click={() => (activityExpanded = !activityExpanded)}>
+        <span class="q-activity-title">Activity</span>
+        <span class="q-activity-chevron" class:open={activityExpanded}>›</span>
+      </button>
+      {#if activityExpanded}
+        <div class="q-activity-list">
+          {#each $queueActivity.slice(0, 20) as entry (entry.timestamp)}
+            <div class="q-activity-row">
+              <span class="q-activity-icon">{activityIcon[entry.action] ?? '•'}</span>
+              <div class="q-activity-info">
+                <span class="q-activity-text"><strong>{entry.by_username}</strong> {activityText(entry)}</span>
+                <span class="q-activity-time">{new Date(entry.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -296,5 +338,83 @@
   .remove-btn:hover {
     color: #ff4444;
     background: rgba(255, 68, 68, 0.1);
+  }
+
+  .q-activity {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .q-activity-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0 0 6px;
+    cursor: pointer;
+  }
+
+  .q-activity-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .q-activity-chevron {
+    font-size: 16px;
+    color: var(--text-muted);
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+
+  .q-activity-chevron.open {
+    transform: rotate(-90deg);
+  }
+
+  .q-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .q-activity-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .q-activity-icon {
+    font-size: 13px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .q-activity-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .q-activity-text {
+    font-size: 12px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .q-activity-time {
+    font-size: 10px;
+    color: var(--text-muted);
   }
 </style>

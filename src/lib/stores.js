@@ -71,3 +71,6 @@ export const topSpenders = writable([])
 
 // activeVote — การโหวต remove/skip ที่กำลัง active อยู่ในห้อง (null = ไม่มี)
 export const activeVote = writable(null)
+
+// queueActivity — log การกระทำใน queue (newest first, max 50)
+export const queueActivity = writable([])

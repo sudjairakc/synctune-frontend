@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders, activeVote } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders, activeVote, queueActivity } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -241,7 +241,16 @@ export function createWebSocket(url) {
           }, ...h].slice(0, 100))
           break
         }
-        // queue actions → toast
+        // queue actions → persistent log + toast
+        const queueActionSet = new Set(['remove_song', 'skip_song', 'reorder_queue', 'set_playback_mode', 'set_playback_speed'])
+        if (queueActionSet.has(payload.action)) {
+          queueActivity.update(a => [{
+            action: payload.action,
+            by_username: payload.by_username,
+            detail: payload.detail || '',
+            timestamp: Date.now(),
+          }, ...a].slice(0, 50))
+        }
         const queueLabels = {
           remove_song:        (p) => `🗑 ${p.by_username} removed "${p.detail}"`,
           skip_song:          (p) => `⏭ ${p.by_username} skipped "${p.detail}"`,
