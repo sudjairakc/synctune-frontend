@@ -47,6 +47,7 @@
   import SoundPad from './components/SoundPad.svelte'
   import SupportMe from './components/SupportMe.svelte'
   import AdminPanel from './components/AdminPanel.svelte'
+  import VoteModal from './components/VoteModal.svelte'
 
   let legalOpen = false;
   let adminOpen = false;
@@ -188,6 +189,7 @@
     <div class="sidebar">
       <div class="sidebar-scroll">
         <div data-tutorial="add-song"><AddSong {ws} /></div>
+        <VoteModal {ws} />
         <div data-tutorial="queue-section"><Queue {ws} /></div>
         <div class="history-section" data-tutorial="history-section">
           <History {ws} />

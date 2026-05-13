@@ -68,3 +68,6 @@ export const pinnedMessages = writable([])
 
 // topSpenders — รายการ top spenders (merged by name, sorted by amount desc)
 export const topSpenders = writable([])
+
+// activeVote — การโหวต remove/skip ที่กำลัง active อยู่ในห้อง (null = ไม่มี)
+export const activeVote = writable(null)

@@ -13,6 +13,7 @@
   let savingSlot = false
   let historyExpanded = false
 
+  let audioUnlocked = false
   let copyingSlot = null
   let holdTimer = null
 
@@ -68,6 +69,25 @@
     return data.title || ''
   }
 
+  function unlockAudio() {
+    if (audioUnlocked) return
+    // สร้าง YT player เงียบชั่วคราวเพื่อ unlock autoplay policy ของ browser
+    const div = document.createElement('div')
+    padHostEl.appendChild(div)
+    const unlock = new window.YT.Player(div, {
+      height: '1', width: '1',
+      playerVars: { autoplay: 1, mute: 1, controls: 0 },
+      events: {
+        onReady: (e) => {
+          e.target.stopVideo()
+          e.target.destroy()
+          div.remove()
+          audioUnlocked = true
+        },
+      },
+    })
+  }
+
   function cleanupSlot(slot) {
     const entry = players[slot]
     if (entry) {
@@ -80,7 +100,22 @@
     if (playingSlots.size === 0) soundPadActive.set(false)
   }
 
+  function stopAllSlots() {
+    for (const slot of Object.keys(players)) {
+      const entry = players[slot]
+      try { entry.player.pauseVideo() } catch {}
+      try { entry.player.destroy() } catch {}
+    }
+    players = {}
+    playingSlots = new Set()
+    playingUsers = {}
+    soundPadActive.set(false)
+  }
+
   function startSlotPlayer(slot, videoId) {
+    // stop ทุก slot เก่าก่อนเสมอ (1 sound at a time)
+    stopAllSlots()
+
     if (players[slot]) {
       const entry = players[slot]
       if (entry.ready) {
@@ -137,16 +172,14 @@
     const videoId = d.video_id ?? d.videoId
     const slot = d.slot
     if (videoId == null || slot == null) return
-    // ถ้า page ซ่อนอยู่ browser จะ block autoplay และ queue playVideo() ไว้
-    // พอ page กลับมา visible จะเล่นเสียงค้างที่ไม่ควรเล่นแล้ว
     if (document.hidden) return
 
     playingUsers[slot] = d.user_id ?? null
-    playingSlots = new Set([...playingSlots, slot])
+    playingSlots = new Set([slot])
     soundPadActive.set(true)
 
     if (!ytReady) {
-      pendingBySlot[slot] = videoId
+      pendingBySlot = { [slot]: videoId }
       return
     }
     startSlotPlayer(slot, videoId)
@@ -156,16 +189,18 @@
     playPadVideo(e.detail)
   }
 
+  function onSoundPadStop() {
+    stopAllSlots()
+  }
+
   function handleStop() {
-    for (const slot of Object.keys(players)) {
-      const entry = players[slot]
-      try { entry.player.pauseVideo() } catch {}
-      try { entry.player.destroy() } catch {}
+    if (!ws) { stopAllSlots(); return }
+    try {
+      ws.send('soundpad_stop', {})
+    } catch (err) {
+      console.error('[SoundPad] stop send failed:', err)
+      stopAllSlots()
     }
-    players = {}
-    playingSlots = new Set()
-    playingUsers = {}
-    soundPadActive.set(false)
   }
 
   function openEdit(i) {
@@ -240,9 +275,11 @@
 
   onMount(() => {
     window.addEventListener('soundpad:play', onSoundPadPlay)
+    window.addEventListener('soundpad:stop', onSoundPadStop)
 
     function boot() {
       ytReady = true
+      unlockAudio()
       for (const [slot, videoId] of Object.entries(pendingBySlot)) {
         delete pendingBySlot[slot]
         startSlotPlayer(parseInt(slot), videoId)
@@ -268,14 +305,20 @@
   onDestroy(() => {
     soundPadActive.set(false)
     window.removeEventListener('soundpad:play', onSoundPadPlay)
-    handleStop()
+    window.removeEventListener('soundpad:stop', onSoundPadStop)
+    stopAllSlots()
   })
 </script>
 
 <div class="sound-pad">
   <div class="sound-pad-header">
     <h3 class="sound-pad-title">Sound Pad</h3>
-    <button type="button" class="stop-btn" on:click={handleStop}>Stop</button>
+    <div class="sound-pad-actions">
+      {#if !audioUnlocked}
+        <button type="button" class="unlock-btn" on:click={unlockAudio}>🔊 Enable audio</button>
+      {/if}
+      <button type="button" class="stop-btn" on:click={handleStop}>Stop</button>
+    </div>
   </div>
 
   <!-- ต้องอยู่ใน DOM เสมอ — YT player iframes ถูก append เข้ามาที่นี่ -->
@@ -424,6 +467,23 @@
     font-size: 15px;
     font-weight: 700;
     color: var(--text-primary);
+  }
+
+  .sound-pad-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .unlock-btn {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
   }
 
   .stop-btn {

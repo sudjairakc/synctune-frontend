@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders, activeVote } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -211,6 +211,35 @@ export function createWebSocket(url) {
       case 'soundpad_updated':
         soundPad.set(normalizeSoundPad(payload.sound_pad))
         break
+
+      case 'soundpad_stop':
+        window.dispatchEvent(new CustomEvent('soundpad:stop'))
+        break
+
+      case 'vote_started':
+        activeVote.set(payload)
+        break
+
+      case 'vote_updated':
+        activeVote.update(v => v && v.vote_id === payload.vote_id ? { ...v, yes_votes: payload.yes_votes, required: payload.required } : v)
+        break
+
+      case 'vote_resolved':
+        activeVote.set(null)
+        if (payload.result === 'passed') showToast('✅ Vote passed', 'success', 2500)
+        break
+
+      case 'room_action': {
+        const actionLabels = {
+          remove_song: (p) => `🗑 ${p.by_username} removed "${p.detail}"`,
+          reorder_queue: (p) => `↕️ ${p.by_username} reordered "${p.detail}"`,
+          soundpad_stop: (p) => `🔇 ${p.by_username} stopped the sound`,
+          set_playback_mode: (p) => `🎛 ${p.by_username} changed ${p.detail}`,
+        }
+        const fmt = actionLabels[payload.action]
+        if (fmt) showToast(fmt(payload), 'info', 3000)
+        break
+      }
 
       case 'soundpad_play': {
         window.dispatchEvent(new CustomEvent('soundpad:play', { detail: payload }))
