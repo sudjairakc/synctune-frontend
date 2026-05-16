@@ -1,5 +1,5 @@
 # CLAUDE.md — synctune-frontend
-## Svelte Frontend · Vite · YouTube IFrame API · v1.0.0
+## Svelte Frontend · Vite · YouTube IFrame API · v1.0.1
 
 Read this file before doing any work in this repo.
 
@@ -70,6 +70,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ```
 synctune-frontend/
 ├── CLAUDE.md
+├── SKILL.md                          ← คู่มือ Claude Code Skills สำหรับ repo นี้
+├── DESIGN.md                         ← Architecture decisions และ design notes
 ├── index.html
 ├── package.json
 ├── vite.config.js
@@ -85,20 +87,26 @@ synctune-frontend/
     ├── App.svelte
     ├── test-setup.js
     ├── lib/
-    │   ├── websocket.js          ← WS client + exponential backoff + join()
-    │   ├── stores.js             ← Svelte writable stores (single source of truth)
-    │   ├── toast.js              ← Toast notification store
-    │   └── sound.js              ← Web Audio API tones (no external audio files)
+    │   ├── websocket.js              ← WS client + exponential backoff + join()
+    │   ├── stores.js                 ← Svelte writable stores (single source of truth)
+    │   ├── toast.js                  ← Toast notification store
+    │   └── sound.js                  ← Web Audio API tones (no external audio files)
     └── components/
-        ├── Player.svelte         ← YouTube IFrame wrapper + seek guard + autoplay
-        ├── Queue.svelte          ← Drag & drop queue list
-        ├── AddSong.svelte        ← URL input (hides added_by once joined)
-        ├── History.svelte        ← Playback history + requeue
-        ├── PlaybackControls.svelte ← Autoplay / Shuffle / Random toggle
-        ├── Chat.svelte           ← Real-time chat + online users
-        ├── JoinModal.svelte      ← Name + Room ID modal before entering
-        ├── TutorialTooltip.svelte ← First-time onboarding overlay
-        └── LegalModal.svelte     ← Terms of Service + Privacy Policy modal
+        ├── Player.svelte             ← YouTube IFrame wrapper + seek guard + autoplay
+        ├── Queue.svelte              ← Drag & drop queue list + activity log
+        ├── AddSong.svelte            ← URL input (hides added_by once joined)
+        ├── History.svelte            ← Playback history + requeue
+        ├── PlaybackControls.svelte   ← Autoplay / Shuffle / Random / Speed toggle
+        ├── Chat.svelte               ← Real-time chat + online users
+        ├── SoundPad.svelte           ← 50-slot shared sound pad + play history
+        ├── VoicePTT.svelte           ← Push-to-talk WebRTC (PTT button + peer management)
+        ├── VoteModal.svelte          ← Voting UI for remove/skip with live count
+        ├── Suggestions.svelte        ← Curated song suggestion panel
+        ├── SupportMe.svelte          ← Top spenders leaderboard + PromptPay QR
+        ├── AdminPanel.svelte         ← Admin controls (broadcast scheduler, top spenders)
+        ├── JoinModal.svelte          ← Name + Room ID modal before entering
+        ├── TutorialTooltip.svelte    ← First-time onboarding overlay
+        └── LegalModal.svelte         ← Terms of Service + Privacy Policy modal
 ```
 
 ---
@@ -110,6 +118,7 @@ npm install
 npm run dev          # http://localhost:5173
 npm run test         # Vitest unit + component tests
 npm run lint
+npm run format
 npm run build
 ```
 
@@ -119,12 +128,13 @@ npm run build
 
 - **Stores update via WebSocket events only** — no optimistic updates
 - **Seek Guard**: check drift > 3 s before every seek; skip if serverSeek >= duration
-- **User Seek Cooldown**: after user drags/pauses in the player, ignore `seek_sync` for 5 s to prevent snap-back
+- **User Seek Cooldown**: after user drags/pauses in the player, ignore `seek_sync` for 5 s
 - **YouTube IFrame API**: must wait for `onYouTubeIframeAPIReady` — `playerContainer` must always be in the DOM (never inside `{#if}`)
-- **queue_id**: all events sent to the backend (`song_ended`, `skip_song`, `report_error`, `reorder_queue`, `remove_song`) use `queue_id`, not the YouTube video ID
+- **queue_id**: all events sent to backend use `queue_id`, not the YouTube video ID
 - **isPlaying**: check before loading video — if false, use `cueVideoById` instead of `loadVideoById`
-- **join first**: `ws.join(username, profile_img, room_id?)` must be called before any other event — websocket.js handles sending it automatically in `onopen`
-- **room_id**: 6 digits only — omitting or null causes the server to create a new room automatically
+- **join first**: `ws.join()` must be called before any other event — websocket.js sends it automatically in `onopen`
+- **SoundPad**: each client plays audio fully independently — no global soundpad playback state
+- **Voice PTT**: backend only relays signaling; all media is peer-to-peer between clients
 - **Every error path must have UI feedback** — no silent failures
 
 ---
@@ -133,32 +143,52 @@ npm run build
 
 ### Server → Client
 
-| Event | Stores updated |
+| Event | Stores / Effect |
 |---|---|
-| `room_joined` | currentRoom, queue, currentIndex, seekTime, isPlaying, history, autoplay, shuffle, randomPlay, chatHistory, onlineUsers |
+| `room_joined` | currentRoom, queue, currentIndex, seekTime, isPlaying, history, autoplay, shuffle, randomPlay, playbackSpeed, chatHistory, onlineUsers, soundpad |
 | `initial_state` | Same as `room_joined` (backward-compat) |
-| `queue_updated` | queue, currentIndex, isPlaying, history (if present) |
+| `queue_updated` | queue, currentIndex, isPlaying, history |
 | `seek_sync` | seekTime, isPlaying |
-| `playback_mode_updated` | autoplay, shuffle, randomPlay (only fields present — use `!= null` check) |
-| `song_skipped` | toast with reason mapping |
-| `user_joined` | onlineUsers + toast notice |
+| `playback_mode_updated` | autoplay, shuffle, randomPlay, playbackSpeed |
+| `song_skipped` | toast with reason |
+| `user_joined` | onlineUsers + toast |
 | `user_left` | onlineUsers |
 | `message_received` | chatHistory (append) |
-| `error` | toast — codes: `NOT_JOINED`, `INVALID_USERNAME`, `INVALID_ROOM_ID`, `EMPTY_MESSAGE`, `RATE_LIMITED` |
+| `soundpad_updated` | soundpad store (50-slot array) |
+| `soundpad_play` | trigger audio on this client independently |
+| `soundpad_stop` | stop soundpad audio on this client |
+| `vote_started` | open VoteModal with vote info |
+| `vote_updated` | update yes count in VoteModal |
+| `vote_resolved` | close VoteModal + show result toast |
+| `voice_start` | show PTT indicator for that user |
+| `voice_stop` | hide PTT indicator |
+| `voice_join / offer / answer / ice` | WebRTC signaling — handled in VoicePTT.svelte |
+| `error` | toast — codes: `NOT_JOINED`, `VOTE_IN_PROGRESS`, `NO_ACTIVE_VOTE`, `ALREADY_VOTED`, etc. |
 
 ### Client → Server
 
 | Event | Payload | Notes |
 |---|---|---|
-| `join` | `{ username, profile_img?, room_id? }` | Sent immediately after connect — auto from `ws.join()` — omit room_id to create a new room |
-| `add_song` | `{ youtube_url, added_by? }` | `added_by` only sent when not yet joined |
-| `remove_song` | `{ song_id: queue_id }` | |
+| `join` | `{ username, profile_img?, room_id? }` | Auto from `ws.join()` |
+| `add_song` | `{ youtube_url, added_by? }` | |
+| `remove_song` | `{ song_id: queue_id }` | May open vote if not own song |
 | `reorder_queue` | `{ song_id: queue_id, new_index }` | |
-| `skip_song` | `{ song_id: queue_id }` | |
+| `skip_song` | `{ song_id: queue_id }` | May open vote if not own song |
 | `song_ended` | `{ song_id: queue_id }` | |
 | `report_error` | `{ song_id: queue_id, error_code }` | |
-| `set_playback_mode` | `{ autoplay?, shuffle?, random_play? }` | |
-| `send_message` | `{ text }` | Truncated at 500 characters |
+| `set_playback_mode` | `{ autoplay?, shuffle?, random_play?, playback_speed? }` | |
+| `send_message` | `{ text }` | Max 500 chars |
+| `soundpad_set` | `{ slot, video_id, title }` | slot = 0–49 |
+| `soundpad_clear` | `{ slot }` | |
+| `soundpad_play` | `{ slot }` | Triggers broadcast to all clients |
+| `soundpad_stop` | — | Triggers stop broadcast |
+| `vote_cast` | `{ vote_id }` | |
+| `voice_start` | — | |
+| `voice_stop` | — | |
+| `voice_join` | `{ to: client_id }` | |
+| `voice_offer` | `{ to, sdp }` | |
+| `voice_answer` | `{ to, sdp }` | |
+| `voice_ice` | `{ to, candidate }` | |
 
 ---
 
@@ -167,19 +197,23 @@ npm run build
 | Store | Type | Description |
 |---|---|---|
 | `queue` | `Song[]` | Current song queue |
-| `currentIndex` | `number` | Index of the currently playing song |
-| `seekTime` | `number` | Current playback position (seconds) from server |
+| `currentIndex` | `number` | Index of currently playing song |
+| `seekTime` | `number` | Playback position (seconds) from server |
 | `isPlaying` | `boolean` | |
-| `history` | `HistorySong[]` | Previously played songs |
+| `history` | `HistorySong[]` | Played/skipped songs |
 | `toasts` | `Toast[]` | |
 | `connectionStatus` | `string` | `'connecting'` \| `'connected'` \| `'disconnected'` |
 | `autoplay` | `boolean` | |
 | `shuffle` | `boolean` | |
 | `randomPlay` | `boolean` | |
-| `currentUser` | `User\|null` | The local user (null if not yet joined) |
-| `onlineUsers` | `User[]` | List of users currently online |
-| `chatHistory` | `ChatMessage[]` | Chat message history |
-| `currentRoom` | `string\|null` | room_id of the current room (null if not yet joined) |
+| `playbackSpeed` | `number` | Playback speed (0.5–2.0) |
+| `currentUser` | `User\|null` | Local user (null before join) |
+| `onlineUsers` | `User[]` | Currently online users |
+| `chatHistory` | `ChatMessage[]` | Chat messages |
+| `currentRoom` | `string\|null` | Room ID (null before join) |
+| `soundpad` | `(SoundPadSlot\|null)[]` | 50-slot SoundPad state |
+| `topSpenders` | `TopSpender[]` | Top spenders leaderboard |
+| `activeVote` | `Vote\|null` | Current active vote (null if none) |
 
 ---
 
@@ -194,8 +228,8 @@ npm run build
 
 ## 7. SEO & Public Files
 
-- `index.html` has full meta tags: description, Open Graph, Twitter Card, canonical URL, robots
-- `public/og-image.png` — OG image used for social sharing previews
+- `index.html` has full meta tags: description, Open Graph, Twitter Card, canonical URL
+- `public/og-image.png` — OG image for social sharing
 - `public/robots.txt` — allows all crawlers, links to sitemap
 - `public/sitemap.xml` — single-page sitemap for `https://synctune-frontend.vercel.app/`
 - Live URL: `https://synctune-frontend.vercel.app`
