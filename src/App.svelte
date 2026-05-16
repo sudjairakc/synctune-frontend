@@ -296,7 +296,8 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
     background: var(--bg-base);
     color: var(--text-primary);
     min-height: 100vh;
@@ -313,7 +314,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
+    padding: 14px 24px;
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
     position: sticky;
@@ -329,21 +330,21 @@
 
   .app-title {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--yt-red);
     letter-spacing: -0.02em;
   }
 
   .room-badge {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     font-family: monospace;
     color: var(--text-secondary);
     background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 3px 8px;
+    border-radius: 20px;
+    padding: 4px 12px;
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
     white-space: nowrap;
@@ -367,12 +368,12 @@
   }
 
   .user-avatar {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: var(--accent);
     color: white;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -381,7 +382,8 @@
   }
 
   .username {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--text-secondary);
     max-width: 120px;
     white-space: nowrap;
@@ -393,7 +395,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--status-connecting);
   }
 
@@ -413,9 +416,9 @@
     background: none;
     border: 1px solid var(--border);
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    font-size: 16px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -433,11 +436,11 @@
   .leave-btn {
     background: none;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 20px;
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    padding: 5px 10px;
+    padding: 7px 16px;
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s, background 0.15s;
     flex-shrink: 0;
@@ -533,9 +536,10 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
+    padding: 14px 18px;
+    border-radius: 14px;
     font-size: 14px;
+    font-weight: 500;
     background: var(--toast-bg);
     border-left: 4px solid var(--accent);
     box-shadow: var(--shadow);

@@ -108,7 +108,6 @@
     const videoId = d.video_id
     const slot = d.slot
     if (videoId == null || slot == null) return
-    if (document.hidden) return
     if (!soundpadReady) return
 
     playingSlot = slot

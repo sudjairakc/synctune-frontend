@@ -175,8 +175,8 @@
 <style>
   .queue {
     background: var(--bg-surface);
-    border-radius: 8px;
-    padding: 16px;
+    border-radius: 16px;
+    padding: 18px;
     border: 1px solid var(--border);
   }
 
@@ -186,12 +186,10 @@
   }
 
   h3 {
-    margin: 0 0 12px 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    margin: 0 0 14px 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
   }
 
   .broadcast-banner {
@@ -246,9 +244,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 10px 14px;
     background: var(--bg-base);
-    border-radius: 6px;
+    border-radius: 12px;
     border: 1px solid transparent;
     cursor: grab;
     transition: background 0.15s, border-color 0.15s;
@@ -299,6 +297,7 @@
   .song-title {
     color: var(--text-primary);
     font-size: 14px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -316,10 +315,11 @@
 
   .now-playing-badge {
     font-size: 11px;
+    font-weight: 700;
     color: var(--accent);
     background: var(--accent-badge);
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
     flex-shrink: 0;
   }
 

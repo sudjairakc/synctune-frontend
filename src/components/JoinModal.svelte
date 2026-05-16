@@ -90,19 +90,19 @@
   .modal {
     background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 32px;
+    border-radius: 20px;
+    padding: 36px;
     width: 100%;
-    max-width: 360px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     box-shadow: var(--shadow);
   }
 
   .modal-title {
     margin: 0;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--text-primary);
     text-align: center;
@@ -110,18 +110,19 @@
 
   .modal-sub {
     margin: 0;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-muted);
     text-align: center;
   }
 
   .name-input {
-    padding: 10px 14px;
+    padding: 12px 16px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     background: var(--bg-base);
     color: var(--text-primary);
     font-size: 15px;
+    font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
     width: 100%;
@@ -141,13 +142,14 @@
   }
 
   .join-btn {
-    padding: 10px;
+    padding: 13px;
     background: var(--yt-red);
     color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
     transition: background 0.2s, opacity 0.2s;
   }

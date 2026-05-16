@@ -82,12 +82,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 14px;
+    padding: 8px 18px;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 20px;
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
+    font-family: inherit;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
     user-select: none;
@@ -110,11 +111,12 @@
   }
 
   .icon {
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1;
   }
 
   .label {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 500;
   }
 </style>

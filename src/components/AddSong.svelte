@@ -103,20 +103,18 @@
 
 <style>
   .add-song {
-    padding: 16px;
+    padding: 18px;
     background: var(--bg-surface);
-    border-radius: 8px;
+    border-radius: 16px;
     margin-bottom: 16px;
     border: 1px solid var(--border);
   }
 
   h3 {
-    margin: 0 0 12px 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    margin: 0 0 14px 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
   }
 
   .input-row {
@@ -135,12 +133,13 @@
   }
 
   input {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 12px;
     background: var(--bg-base);
     color: var(--text-primary);
     font-size: 14px;
+    font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
   }
@@ -151,13 +150,14 @@
   input:disabled { opacity: 0.6; }
 
   .add-btn {
-    padding: 8px 20px;
+    padding: 10px 22px;
     background: var(--yt-red);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 12px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
     transition: background 0.2s, opacity 0.2s;
     white-space: nowrap;

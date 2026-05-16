@@ -513,7 +513,7 @@
   .chat {
     background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -525,17 +525,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
 
   .chat-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
   }
 
   .header-right { display: flex; align-items: center; gap: 8px; }
@@ -826,8 +824,8 @@
   /* ---- Bubble ---- */
   .msg-bubble {
     background: var(--bg-elevated);
-    border-radius: 12px;
-    padding: 6px 10px;
+    border-radius: 16px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -838,7 +836,7 @@
 
   .msg-deleted { font-size: 12px; color: var(--text-muted); }
 
-  .msg-text { font-size: 13px; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
+  .msg-text { font-size: 14px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
 
   .msg-image {
     max-width: 200px;
@@ -1066,12 +1064,12 @@
 
   .chat-input {
     flex: 1;
-    padding: 8px 10px;
+    padding: 10px 14px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     background: var(--bg-base);
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 14px;
     outline: none;
     resize: none;
     line-height: 1.4;
@@ -1086,14 +1084,14 @@
   .send-btn {
     background: var(--yt-red);
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     color: white;
     font-size: 16px;
-    width: 36px;
+    width: 42px;
     cursor: pointer;
     transition: background 0.15s, opacity 0.15s;
     flex-shrink: 0;
-    height: 36px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;

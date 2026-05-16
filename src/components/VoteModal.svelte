@@ -71,7 +71,7 @@
           <em>"{$activeVote.song_title}"</em>
         </span>
         <span class="vote-sub">
-          {$activeVote.yes_votes}/{$activeVote.required} votes needed · {countdown}s
+          {$activeVote.yes_votes}/{$activeVote.required} votes needed (of {$activeVote.total}) · {countdown}s
         </span>
       </div>
     </div>
