@@ -190,6 +190,17 @@ export function createWebSocket(url) {
 
       case 'top_spenders_updated':
         topSpenders.set((payload.spenders ?? []).sort((a, b) => b.amount - a.amount))
+        if (payload.action === 'donated' && payload.new_spender) {
+          const { name, amount } = payload.new_spender
+          showToast(`💸 ${name} donated ฿${amount.toLocaleString()}!`, 'success', 6000)
+          if ('speechSynthesis' in window) {
+            const utt = new SpeechSynthesisUtterance(`ขอบคุณ ${name} ที่โดเนท ${amount} บาทนะครับ`)
+            utt.lang = 'th-TH'
+            utt.rate = 0.95
+            window.speechSynthesis.cancel()
+            window.speechSynthesis.speak(utt)
+          }
+        }
         break
 
       case 'playback_speed_updated':
