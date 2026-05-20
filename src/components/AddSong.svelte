@@ -16,12 +16,12 @@
     errorMessage = ''
 
     if (!youtubeUrl.trim()) {
-      errorMessage = 'Please enter a YouTube URL'
+      errorMessage = 'Please enter a YouTube or TikTok URL'
       return
     }
 
-    if (!isValidYouTubeURL(youtubeUrl.trim())) {
-      errorMessage = 'Invalid URL. Please use a YouTube URL'
+    if (!isValidURL(youtubeUrl.trim())) {
+      errorMessage = 'Invalid URL. Please use a YouTube or TikTok URL'
       return
     }
 
@@ -32,7 +32,7 @@
 
     isSubmitting = true
     try {
-      const payload = { youtube_url: youtubeUrl.trim() }
+      const payload = { video_url: youtubeUrl.trim() }
       if (!$currentUser) payload.added_by = addedBy.trim() || 'Anonymous'
       ws.send('add_song', payload)
       youtubeUrl = ''
@@ -49,8 +49,16 @@
     if (event.key === 'Enter') handleSubmit()
   }
 
+  function isValidURL(url) {
+    return isValidYouTubeURL(url) || isValidTikTokURL(url)
+  }
+
   function isValidYouTubeURL(url) {
     return /^https?:\/\/(www\.)?(youtube\.com\/(watch\?.*v=|shorts\/|live\/|music\/watch\?.*v=)|music\.youtube\.com\/watch\?.*v=|youtu\.be\/)[\w-]{11}/.test(url)
+  }
+
+  function isValidTikTokURL(url) {
+    return /^https?:\/\/(www\.|m\.|vt\.|vm\.)?tiktok\.com\//.test(url)
   }
 
   function isLiveYouTubeURL(url) {
@@ -68,7 +76,7 @@
       type="text"
       bind:value={youtubeUrl}
       on:keydown={handleKeydown}
-      placeholder="YouTube URL (youtube.com/watch?v=... or youtu.be/...)"
+      placeholder="YouTube or TikTok URL"
       class="url-input"
       class:error={errorMessage}
       disabled={isSubmitting}
