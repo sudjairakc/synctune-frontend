@@ -6,7 +6,7 @@
   export let ws = null
 
   // --- DOM refs ---
-  let padPlayerEl    // div ที่ผูกกับ YT.Player (always in DOM)
+  let padPlayerEl       // div ที่ผูกกับ YT.Player (always in DOM)
 
   // --- YT player state ---
   let soundpadPlayer = null
@@ -19,6 +19,7 @@
 
   // --- TikTok overlay state ---
   let tiktokOverlayId = null  // TikTok video ID ที่แสดงอยู่
+
 
   // --- UI state ---
   let editingSlot = null
@@ -66,10 +67,6 @@
   function extractTikTokId(url) {
     const m = (url || '').trim().match(/tiktok\.com\/(?:@[^/]+\/video\/|v\/)(\d+)/)
     return m ? m[1] : null
-  }
-
-  function isTikTokURL(url) {
-    return /^https?:\/\/(www\.|m\.|vt\.|vm\.)?tiktok\.com\//.test((url || '').trim())
   }
 
   async function fetchTitle(videoId) {
@@ -132,10 +129,9 @@
     audioBlocked = false
 
     if (platform === 'tiktok') {
-      // หยุด YouTube ถ้ากำลังเล่น แล้วแสดง TikTok overlay
       try { soundpadPlayer?.stopVideo() } catch {}
       soundPadActive.set(true)
-      tiktokOverlayId = videoId
+      if (tiktokOverlayId !== videoId) tiktokOverlayId = videoId // ไม่ reload ถ้าเล่นอยู่แล้ว
       return
     }
 
@@ -176,12 +172,11 @@
     savingSlot = true
     try {
       if (isTikTokSlot) {
-        if (!isTikTokURL(editUrl)) { showToast('Invalid TikTok URL', 'error'); return }
         const id = extractTikTokId(editUrl)
         if (id) {
           ws.send('soundpad_set', { slot, video_id: id, title: `TikTok ${id}`, platform: 'tiktok' })
         } else {
-          // short URL (vt.tiktok.com ฯลฯ) — ให้ backend resolve
+          // short URL — ให้ backend resolve
           ws.send('soundpad_set', { slot, video_url: editUrl.trim(), title: '', platform: 'tiktok' })
         }
       } else {
@@ -210,9 +205,21 @@
 
   function playSlot(slot) {
     if (!ws) { showToast('Not connected', 'error'); return }
-    if (!$soundPad[slot]?.video_id) return
+    const cell = $soundPad[slot]
+    if (!cell?.video_id) return
+
+    // TikTok: set immediately within user gesture so browser allows autoplay
+    if (cell.platform === 'tiktok') {
+      try { soundpadPlayer?.stopVideo() } catch {}
+      soundPadActive.set(true)
+      playingSlot = slot
+      playingUserId = $currentUser?.id ?? null
+      tiktokOverlayId = cell.video_id
+    }
+
     try { ws.send('soundpad_play', { slot }) } catch (err) {
       console.error('[SoundPad] play send failed:', err)
+      if (cell.platform === 'tiktok') stopSoundpad()
     }
   }
 
@@ -262,16 +269,18 @@
   <!-- persistent YT player — ต้องอยู่ใน DOM เสมอ เหมือน main player -->
   <div bind:this={padPlayerEl} class="sound-pad-yt-host" aria-hidden="true"></div>
 
-  <!-- TikTok overlay -->
   {#if tiktokOverlayId}
-    <div class="tiktok-overlay">
-      <iframe
-        src="https://www.tiktok.com/embed/v2/{tiktokOverlayId}"
-        class="tiktok-iframe"
-        allow="autoplay"
-        allowfullscreen
-        title="TikTok"
-      ></iframe>
+    <div class="tiktok-modal-backdrop" on:click={handleStop} role="presentation">
+      <div class="tiktok-modal" on:click|stopPropagation role="presentation">
+        <button class="tiktok-modal-close" on:click={handleStop} aria-label="Close">×</button>
+        <iframe
+          src="https://www.tiktok.com/embed/v2/{tiktokOverlayId}?lang={navigator.language}&referrer={encodeURIComponent(window.location.href)}"
+          class="tiktok-iframe"
+          allow="autoplay; fullscreen"
+          allowfullscreen
+          title="TikTok"
+        ></iframe>
+      </div>
     </div>
   {/if}
 
@@ -300,6 +309,7 @@
             on:pointerup={onSlotPointerUp} on:pointerleave={onSlotPointerUp}
             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSlotClick(slot) } }}>
             {#if copyingSlot === slot}<span class="copy-tooltip">Copied!</span>{/if}
+            <span class="slot-num">{slot + 1}</span>
             <img class="thumb" src={THUMB(cell.video_id)} alt="" loading="lazy" />
             <span class="slot-title">{cell.title || cell.video_id}</span>
             {#if slot === playingSlot && getUserLabel(playingUserId)}
@@ -308,7 +318,10 @@
             <button type="button" class="slot-clear" title="Remove" aria-label="Remove slot" on:click={(e) => clearSlot(slot, e)}>×</button>
           </div>
         {:else}
-          <button type="button" class="slot-empty" on:click={() => onSlotClick(slot)} aria-label="Add YouTube sound to slot {slot + 1}">+</button>
+          <button type="button" class="slot-empty" on:click={() => onSlotClick(slot)} aria-label="Add YouTube sound to slot {slot + 1}">
+            <span class="slot-num-empty">{slot + 1}</span>
+            <span>+</span>
+          </button>
         {/if}
       </div>
     {/each}
@@ -339,6 +352,7 @@
             on:pointerup={onSlotPointerUp} on:pointerleave={onSlotPointerUp}
             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSlotClick(slot) } }}>
             {#if copyingSlot === slot}<span class="copy-tooltip">Copied!</span>{/if}
+            <span class="slot-num">{slot - 49}</span>
             <div class="tiktok-thumb-placeholder">▶</div>
             <span class="slot-title">{cell.title || cell.video_id}</span>
             {#if slot === playingSlot && getUserLabel(playingUserId)}
@@ -347,7 +361,10 @@
             <button type="button" class="slot-clear" title="Remove" aria-label="Remove slot" on:click={(e) => clearSlot(slot, e)}>×</button>
           </div>
         {:else}
-          <button type="button" class="slot-empty tiktok-empty" on:click={() => onSlotClick(slot)} aria-label="Add TikTok to slot {slot - 49}">+</button>
+          <button type="button" class="slot-empty tiktok-empty" on:click={() => onSlotClick(slot)} aria-label="Add TikTok to slot {slot - 49}">
+            <span class="slot-num-empty">{slot - 49}</span>
+            <span>+</span>
+          </button>
         {/if}
       </div>
     {/each}
@@ -502,6 +519,7 @@
     border: none;
     background: none;
     cursor: pointer;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -576,6 +594,42 @@
     text-overflow: ellipsis;
     width: 100%;
     padding-right: 16px;
+  }
+
+  .slot-num {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .slot-num-empty {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: none;
   }
 
   .slot-clear {
@@ -790,19 +844,51 @@
     color: #e8306a;
   }
 
-  .tiktok-overlay {
-    position: relative;
-    width: 100%;
+  .tiktok-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
+    align-items: center;
     justify-content: center;
-    margin: 10px 0;
+    z-index: 1000;
+  }
+
+  .tiktok-modal {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  }
+
+  .tiktok-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tiktok-modal-close:hover {
+    background: rgba(0, 0, 0, 0.85);
   }
 
   .tiktok-iframe {
     width: 325px;
     height: 580px;
     border: none;
-    border-radius: 8px;
+    display: block;
   }
 
   @media (max-width: 900px) {

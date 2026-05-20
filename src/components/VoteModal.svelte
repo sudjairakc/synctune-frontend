@@ -59,9 +59,40 @@
   }
 
   $: actionLabel = $activeVote?.action === 'remove_song' ? 'remove' : 'skip'
+  $: isBroadcastVote = $activeVote?.action === 'skip_broadcast'
 </script>
 
-{#if $activeVote}
+{#if $activeVote && isBroadcastVote}
+  <!-- Broadcast skip vote — overlay modal กลางหน้าจอ -->
+  <div class="broadcast-overlay">
+    <div class="broadcast-modal">
+      <div class="broadcast-icon">📡</div>
+      <h3 class="broadcast-title">Broadcast กำลังเล่น</h3>
+      <p class="broadcast-desc">
+        กด <strong>Skip</strong> ถ้าต้องการข้าม<br>
+        ต้องทุกคนกดพร้อมกัน ถึงจะข้ามได้
+      </p>
+      <div class="broadcast-count">
+        {$activeVote.yes_votes}/{$activeVote.required} คนกด skip · {countdown}s
+      </div>
+      <div class="vote-progress-bar">
+        <div
+          class="vote-progress-fill"
+          style="width: {Math.min(100, ($activeVote.yes_votes / $activeVote.required) * 100)}%"
+        ></div>
+      </div>
+      <button
+        type="button"
+        class="broadcast-skip-btn"
+        disabled={alreadyVoted}
+        on:click={castVoteAndTrack}
+      >
+        {alreadyVoted ? '✓ กดแล้ว' : '⏭ Skip Broadcast'}
+      </button>
+    </div>
+  </div>
+{:else if $activeVote}
+  <!-- Vote ปกติ (remove/skip song) — banner ด้านบน -->
   <div class="vote-banner">
     <div class="vote-info">
       <span class="vote-icon">{actionLabel === 'skip' ? '⏭' : '🗑'}</span>
@@ -178,6 +209,78 @@
   }
 
   .vote-btn:not(:disabled):hover {
+    opacity: 0.85;
+  }
+
+  /* Broadcast skip vote overlay */
+  .broadcast-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .broadcast-modal {
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 28px 24px;
+    max-width: 320px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .broadcast-icon {
+    font-size: 36px;
+  }
+
+  .broadcast-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .broadcast-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .broadcast-count {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .broadcast-skip-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .broadcast-skip-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .broadcast-skip-btn:not(:disabled):hover {
     opacity: 0.85;
   }
 </style>

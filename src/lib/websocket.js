@@ -236,9 +236,21 @@ export function createWebSocket(url) {
         activeVote.update(v => v && v.vote_id === payload.vote_id ? { ...v, yes_votes: payload.yes_votes, required: payload.required } : v)
         break
 
-      case 'vote_resolved':
+      case 'vote_resolved': {
+        const resolvedAction = get(activeVote)?.action
         activeVote.set(null)
-        if (payload.result === 'passed') showToast('✅ Vote passed', 'success', 2500)
+        if (payload.result === 'passed') {
+          if (resolvedAction === 'skip_broadcast') {
+            showToast('📡 ทุกคนกด skip — broadcast ถูกข้าม', 'success', 3000)
+          } else {
+            showToast('✅ Vote passed', 'success', 2500)
+          }
+        }
+        break
+      }
+
+      case 'broadcast_replay':
+        showToast('📡 Broadcast กำลังเล่นซ้ำ 1 รอบ — ไม่สามารถข้ามได้', 'warning', 4000)
         break
 
       case 'room_action': {
