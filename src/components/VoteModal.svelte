@@ -7,25 +7,13 @@
   let countdown = 30
   let timer = null
 
-  function startTimer() {
-    clearInterval(timer)
-    countdown = 30
-    timer = setInterval(() => {
-      countdown--
-      if (countdown <= 0) {
-        clearInterval(timer)
-        activeVote.set(null)
-      }
-    }, 1000)
-  }
-
   // เริ่ม timer ใหม่ทุกครั้งที่มี vote ใหม่
   $: if ($activeVote) {
-    const remaining = Math.max(0, Math.round(($activeVote.expires_at - Date.now()) / 1000))
-    countdown = remaining
+    const expiresAt = $activeVote.expires_at
+    countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
     clearInterval(timer)
     timer = setInterval(() => {
-      countdown--
+      countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
       if (countdown <= 0) {
         clearInterval(timer)
         activeVote.set(null)

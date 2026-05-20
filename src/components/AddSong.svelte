@@ -25,6 +25,11 @@
       return
     }
 
+    if (isShortTikTokURL(youtubeUrl.trim())) {
+      errorMessage = 'TikTok short link ไม่รองรับ — กรุณาเปิดลิงก์ในเบราว์เซอร์แล้วคัดลอก URL จาก address bar (ควรมี /video/ อยู่ใน URL)'
+      return
+    }
+
     if (!ws) {
       errorMessage = 'Not connected. Please wait a moment'
       return
@@ -59,6 +64,11 @@
 
   function isValidTikTokURL(url) {
     return /^https?:\/\/(www\.|m\.|vt\.|vm\.)?tiktok\.com\//.test(url)
+  }
+
+  function isShortTikTokURL(url) {
+    return /^https?:\/\/(vt\.|vm\.)tiktok\.com\//.test(url) ||
+      /^https?:\/\/(www\.)?tiktok\.com\/t\//.test(url)
   }
 
   function isLiveYouTubeURL(url) {
