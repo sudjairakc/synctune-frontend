@@ -6,7 +6,7 @@ import { playUserJoined, playChatMessage } from './sound.js'
 const MIN_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
 
-const SOUND_PAD_SLOTS = 50
+const SOUND_PAD_SLOTS = 70
 
 function normalizeSoundPad(arr) {
   const out = new Array(SOUND_PAD_SLOTS).fill(null)
@@ -17,6 +17,7 @@ function normalizeSoundPad(arr) {
       out[i] = {
         video_id: x.video_id ?? x.videoId,
         title: x.title ?? '',
+        platform: x.platform || (i >= 50 ? 'tiktok' : 'youtube'),
       }
     }
   }

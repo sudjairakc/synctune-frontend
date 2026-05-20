@@ -51,8 +51,8 @@ export const activeSpeaker = writable([])
 // playbackSpeed — ความเร็วการเล่น (0.25 | 0.5 | 1 | 1.5 | 2)
 export const playbackSpeed = writable(1)
 
-// soundPad — Sound Pad 50 ช่อง (null | { video_id, title }) อัปเดตจาก WebSocket เท่านั้น
-export const soundPad = writable(new Array(50).fill(null))
+// soundPad — Sound Pad 70 ช่อง (0–49 = YouTube, 50–69 = TikTok) อัปเดตจาก WebSocket เท่านั้น
+export const soundPad = writable(new Array(70).fill(null))
 
 // soundPadActive — true ขณะ Sound Pad กำลังเล่น (ให้ Player หลักลดเสียง)
 export const soundPadActive = writable(false)

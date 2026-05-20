@@ -17,6 +17,9 @@
   let playingUserId = null
   let audioBlocked = false // browser block autoplay รอ user click
 
+  // --- TikTok overlay state ---
+  let tiktokOverlayId = null  // TikTok video ID ที่แสดงอยู่
+
   // --- UI state ---
   let editingSlot = null
   let editUrl = ''
@@ -25,10 +28,13 @@
   let copyingSlot = null
   let holdTimer = null
 
-  function onSlotPointerDown(e, i, videoId) {
+  function onSlotPointerDown(e, i, cell) {
     holdTimer = setTimeout(() => {
       holdTimer = null
-      navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${videoId}`).then(() => {
+      const url = cell.platform === 'tiktok'
+        ? `https://www.tiktok.com/video/${cell.video_id}`
+        : `https://www.youtube.com/watch?v=${cell.video_id}`
+      navigator.clipboard.writeText(url).then(() => {
         copyingSlot = i
         setTimeout(() => { copyingSlot = null }, 1200)
       })
@@ -41,6 +47,7 @@
   }
 
   const THUMB = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`
+  const TIKTOK_THUMB = () => null // TikTok oEmbed ต้อง server-side, ใช้ placeholder แทน
 
   function getUserLabel(userId) {
     if (!userId) return null
@@ -53,6 +60,11 @@
     const m = (url || '').trim().match(
       /(?:youtube\.com\/(?:watch\?(?:[^&]*&)*v=|shorts\/|embed\/)|youtu\.be\/|music\.youtube\.com\/watch\?(?:[^&]*&)*v=)([\w-]{11})/
     )
+    return m ? m[1] : null
+  }
+
+  function extractTikTokId(url) {
+    const m = (url || '').trim().match(/tiktok\.com\/(?:@[^/]+\/video\/|v\/)(\d+)/)
     return m ? m[1] : null
   }
 
@@ -98,6 +110,7 @@
     playingSlot = null
     playingUserId = null
     audioBlocked = false
+    tiktokOverlayId = null
     soundPadActive.set(false)
     try { soundpadPlayer?.stopVideo() } catch {}
   }
@@ -107,16 +120,26 @@
     const d = e.detail || {}
     const videoId = d.video_id
     const slot = d.slot
+    const platform = d.platform || (slot >= 50 ? 'tiktok' : 'youtube')
     if (videoId == null || slot == null) return
-    if (!soundpadReady) return
 
     playingSlot = slot
     playingUserId = d.user_id ?? null
     audioBlocked = false
 
+    if (platform === 'tiktok') {
+      // หยุด YouTube ถ้ากำลังเล่น แล้วแสดง TikTok overlay
+      try { soundpadPlayer?.stopVideo() } catch {}
+      soundPadActive.set(true)
+      tiktokOverlayId = videoId
+      return
+    }
+
+    // YouTube path
+    if (!soundpadReady) return
+    tiktokOverlayId = null
     try {
       soundpadPlayer.loadVideoById({ videoId, startSeconds: 0 })
-      // loadVideoById จะ autoplay — ถ้า browser block จะยิง state=2 → audioBlocked=true
     } catch (err) {
       console.error('[SoundPad] play error:', err)
       playingSlot = null
@@ -124,6 +147,7 @@
   }
 
   function onSoundPadStop() {
+    tiktokOverlayId = null
     stopSoundpad()
   }
 
@@ -143,13 +167,20 @@
   function cancelEdit() { editingSlot = null; editUrl = '' }
 
   async function saveEdit(slot) {
-    const id = extractVideoId(editUrl)
-    if (!id) { showToast('Invalid YouTube URL', 'error'); return }
     if (!ws) { showToast('Not connected', 'error'); return }
+    const isTikTokSlot = slot >= 50
     savingSlot = true
     try {
-      const title = await fetchTitle(id)
-      ws.send('soundpad_set', { slot, video_id: id, title })
+      if (isTikTokSlot) {
+        const id = extractTikTokId(editUrl)
+        if (!id) { showToast('Invalid TikTok URL', 'error'); return }
+        ws.send('soundpad_set', { slot, video_id: id, title: `TikTok ${id}`, platform: 'tiktok' })
+      } else {
+        const id = extractVideoId(editUrl)
+        if (!id) { showToast('Invalid YouTube URL', 'error'); return }
+        const title = await fetchTitle(id)
+        ws.send('soundpad_set', { slot, video_id: id, title, platform: 'youtube' })
+      }
       editingSlot = null
       editUrl = ''
     } catch (err) {
@@ -222,90 +253,92 @@
   <!-- persistent YT player — ต้องอยู่ใน DOM เสมอ เหมือน main player -->
   <div bind:this={padPlayerEl} class="sound-pad-yt-host" aria-hidden="true"></div>
 
-  <div class="sound-pad-grid" role="group" aria-label="Sound pad slots">
-    {#each $soundPad as cell, i (i)}
-      <div
-        class="slot"
-        class:playing={i === playingSlot}
-        class:empty={!cell}
-      >
-        {#if editingSlot === i}
+  <!-- TikTok overlay -->
+  {#if tiktokOverlayId}
+    <div class="tiktok-overlay">
+      <iframe
+        src="https://www.tiktok.com/embed/v2/{tiktokOverlayId}"
+        class="tiktok-iframe"
+        allow="autoplay"
+        allowfullscreen
+        title="TikTok"
+      ></iframe>
+    </div>
+  {/if}
+
+  <!-- YouTube slots -->
+  <div class="section-label">YouTube</div>
+  <div class="sound-pad-grid" role="group" aria-label="YouTube sound pad slots">
+    {#each $soundPad.slice(0, 50) as cell, i (i)}
+      {@const slot = i}
+      <div class="slot" class:playing={slot === playingSlot} class:empty={!cell}>
+        {#if editingSlot === slot}
           <div class="slot-edit">
-            <input
-              class="edit-input"
-              type="text"
-              bind:value={editUrl}
-              placeholder="YouTube URL"
-              disabled={savingSlot}
-              on:keydown={(e) => e.key === 'Enter' && saveEdit(i)}
-            />
+            <input class="edit-input" type="text" bind:value={editUrl}
+              placeholder="YouTube URL" disabled={savingSlot}
+              on:keydown={(e) => e.key === 'Enter' && saveEdit(slot)} />
             <div class="edit-actions">
-              <button
-                type="button"
-                class="btn-small"
-                disabled={savingSlot}
-                on:click={() => saveEdit(i)}
-              >
+              <button type="button" class="btn-small" disabled={savingSlot} on:click={() => saveEdit(slot)}>
                 {savingSlot ? '…' : 'Save'}
               </button>
-              <button
-                type="button"
-                class="btn-small ghost"
-                disabled={savingSlot}
-                on:click={cancelEdit}
-              >
-                Cancel
-              </button>
+              <button type="button" class="btn-small ghost" disabled={savingSlot} on:click={cancelEdit}>Cancel</button>
             </div>
           </div>
         {:else if cell}
-          <div
-            class="slot-filled"
-            role="button"
-            tabindex="0"
-            on:click={() => onSlotClick(i)}
-            on:pointerdown={(e) => onSlotPointerDown(e, i, cell.video_id)}
-            on:pointerup={onSlotPointerUp}
-            on:pointerleave={onSlotPointerUp}
-            on:keydown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSlotClick(i)
-              }
-            }}
-          >
-            {#if copyingSlot === i}
-              <span class="copy-tooltip">Copied!</span>
-            {/if}
-            <img
-              class="thumb"
-              src={THUMB(cell.video_id)}
-              alt=""
-              loading="lazy"
-            />
+          <div class="slot-filled" role="button" tabindex="0"
+            on:click={() => onSlotClick(slot)}
+            on:pointerdown={(e) => onSlotPointerDown(e, slot, cell)}
+            on:pointerup={onSlotPointerUp} on:pointerleave={onSlotPointerUp}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSlotClick(slot) } }}>
+            {#if copyingSlot === slot}<span class="copy-tooltip">Copied!</span>{/if}
+            <img class="thumb" src={THUMB(cell.video_id)} alt="" loading="lazy" />
             <span class="slot-title">{cell.title || cell.video_id}</span>
-            {#if i === playingSlot && getUserLabel(playingUserId)}
+            {#if slot === playingSlot && getUserLabel(playingUserId)}
               <span class="playing-user">{getUserLabel(playingUserId)}</span>
             {/if}
-            <button
-              type="button"
-              class="slot-clear"
-              title="Remove"
-              aria-label="Remove slot"
-              on:click={(e) => clearSlot(i, e)}
-            >
-              ×
-            </button>
+            <button type="button" class="slot-clear" title="Remove" aria-label="Remove slot" on:click={(e) => clearSlot(slot, e)}>×</button>
           </div>
         {:else}
-          <button
-            type="button"
-            class="slot-empty"
-            on:click={() => onSlotClick(i)}
-            aria-label="Add sound to slot {i + 1}"
-          >
-            +
-          </button>
+          <button type="button" class="slot-empty" on:click={() => onSlotClick(slot)} aria-label="Add YouTube sound to slot {slot + 1}">+</button>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <!-- TikTok slots -->
+  <div class="section-label tiktok-label">TikTok</div>
+  <div class="sound-pad-grid tiktok-grid" role="group" aria-label="TikTok sound pad slots">
+    {#each $soundPad.slice(50, 70) as cell, i (i)}
+      {@const slot = i + 50}
+      <div class="slot tiktok-slot" class:playing={slot === playingSlot} class:empty={!cell}>
+        {#if editingSlot === slot}
+          <div class="slot-edit">
+            <input class="edit-input" type="text" bind:value={editUrl}
+              placeholder="TikTok URL" disabled={savingSlot}
+              on:keydown={(e) => e.key === 'Enter' && saveEdit(slot)} />
+            <div class="edit-actions">
+              <button type="button" class="btn-small tiktok-btn" disabled={savingSlot} on:click={() => saveEdit(slot)}>
+                {savingSlot ? '…' : 'Save'}
+              </button>
+              <button type="button" class="btn-small ghost" disabled={savingSlot} on:click={cancelEdit}>Cancel</button>
+            </div>
+          </div>
+        {:else if cell}
+          <div class="slot-filled" role="button" tabindex="0"
+            on:click={() => onSlotClick(slot)}
+            on:pointerdown={(e) => onSlotPointerDown(e, slot, cell)}
+            on:pointerup={onSlotPointerUp} on:pointerleave={onSlotPointerUp}
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSlotClick(slot) } }}>
+            {#if copyingSlot === slot}<span class="copy-tooltip">Copied!</span>{/if}
+            <div class="tiktok-thumb-placeholder">▶</div>
+            <span class="slot-title">{cell.title || cell.video_id}</span>
+            {#if slot === playingSlot && getUserLabel(playingUserId)}
+              <span class="playing-user">{getUserLabel(playingUserId)}</span>
+            {/if}
+            <button type="button" class="slot-clear" title="Remove" aria-label="Remove slot" on:click={(e) => clearSlot(slot, e)}>×</button>
+          </div>
+        {:else}
+          <button type="button" class="slot-empty tiktok-empty" on:click={() => onSlotClick(slot)} aria-label="Add TikTok to slot {slot - 49}">+</button>
         {/if}
       </div>
     {/each}
@@ -700,8 +733,72 @@
     color: var(--text-muted);
   }
 
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin: 10px 0 6px;
+  }
+
+  .tiktok-label {
+    color: #e8306a;
+    margin-top: 14px;
+  }
+
+  .tiktok-grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+  }
+
+  .tiktok-slot {
+    border-color: rgba(232, 48, 106, 0.25);
+  }
+
+  .tiktok-slot.playing {
+    border-color: #e8306a;
+    box-shadow: 0 0 0 1px rgba(232, 48, 106, 0.3);
+  }
+
+  .tiktok-empty:hover {
+    color: #e8306a;
+  }
+
+  .tiktok-btn {
+    background: #e8306a;
+  }
+
+  .tiktok-thumb-placeholder {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    max-height: 40px;
+    background: rgba(232, 48, 106, 0.12);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #e8306a;
+  }
+
+  .tiktok-overlay {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+  }
+
+  .tiktok-iframe {
+    width: 325px;
+    height: 580px;
+    border: none;
+    border-radius: 8px;
+  }
+
   @media (max-width: 900px) {
-    .sound-pad-grid {
+    .sound-pad-grid,
+    .tiktok-grid {
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
   }
