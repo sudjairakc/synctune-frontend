@@ -68,6 +68,10 @@
     return m ? m[1] : null
   }
 
+  function isTikTokURL(url) {
+    return /^https?:\/\/(www\.|m\.|vt\.|vm\.)?tiktok\.com\//.test((url || '').trim())
+  }
+
   async function fetchTitle(videoId) {
     const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}&format=json`)
     if (!res.ok) throw new Error('Could not load video info')
@@ -172,9 +176,14 @@
     savingSlot = true
     try {
       if (isTikTokSlot) {
+        if (!isTikTokURL(editUrl)) { showToast('Invalid TikTok URL', 'error'); return }
         const id = extractTikTokId(editUrl)
-        if (!id) { showToast('Invalid TikTok URL', 'error'); return }
-        ws.send('soundpad_set', { slot, video_id: id, title: `TikTok ${id}`, platform: 'tiktok' })
+        if (id) {
+          ws.send('soundpad_set', { slot, video_id: id, title: `TikTok ${id}`, platform: 'tiktok' })
+        } else {
+          // short URL (vt.tiktok.com ฯลฯ) — ให้ backend resolve
+          ws.send('soundpad_set', { slot, video_url: editUrl.trim(), title: '', platform: 'tiktok' })
+        }
       } else {
         const id = extractVideoId(editUrl)
         if (!id) { showToast('Invalid YouTube URL', 'error'); return }
