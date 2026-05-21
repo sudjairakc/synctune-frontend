@@ -74,3 +74,6 @@ export const activeVote = writable(null)
 
 // queueActivity — log การกระทำใน queue (newest first, max 50)
 export const queueActivity = writable([])
+
+// allowSkipBroadcast — admin toggle: อนุญาตให้ user กด skip broadcast ร่วมกันได้
+export const allowSkipBroadcast = writable(false)

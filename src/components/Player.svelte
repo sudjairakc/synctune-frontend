@@ -1,7 +1,7 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
-  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed, soundPadActive } from '$lib/stores.js'
+  import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed, soundPadActive, allowSkipBroadcast } from '$lib/stores.js'
 
   // 2. Props
   export let ws = null
@@ -294,7 +294,7 @@
           >{rate}x</button>
         {/each}
       </div>
-      <button class="skip-btn" on:click={handleSkip} title="Skip song" disabled={isBroadcast}>⏭</button>
+      <button class="skip-btn" on:click={handleSkip} title={isBroadcast && !$allowSkipBroadcast ? 'Admin ปิดการ skip broadcast' : 'Skip song'} disabled={isBroadcast && !$allowSkipBroadcast}>⏭</button>
     </div>
   {/if}
 </div>

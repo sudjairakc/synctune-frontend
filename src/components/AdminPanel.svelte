@@ -10,6 +10,7 @@
   let stats = null
   let rooms = []
   let schedules = []
+  let settings = { allow_skip_broadcast: false }
 
   let activeTab = 'dashboard'
 
@@ -50,7 +51,19 @@
   }
 
   async function loadAll() {
-    await Promise.all([loadStats(), loadRooms(), loadSchedules(), loadSpenders()])
+    await Promise.all([loadStats(), loadRooms(), loadSchedules(), loadSpenders(), loadSettings()])
+  }
+
+  async function loadSettings() {
+    settings = await api('GET', '/admin/settings')
+  }
+
+  async function toggleSkipBroadcast() {
+    try {
+      settings = await api('POST', '/admin/settings', { allow_skip_broadcast: !settings.allow_skip_broadcast })
+    } catch (e) {
+      alert(e.message)
+    }
   }
 
   async function loadStats() {
@@ -211,6 +224,16 @@
       <button class:active={activeTab === 'schedules'} on:click={() => { activeTab = 'schedules'; loadSchedules() }}>Schedules</button>
       <button class:active={activeTab === 'spenders'} on:click={() => { activeTab = 'spenders'; loadSpenders() }}>Top Spenders</button>
     </div>
+
+    <!-- Settings row -->
+    {#if activeTab === 'dashboard'}
+      <div class="settings-row">
+        <span class="settings-label">⏭ Skip Broadcast ร่วมกัน</span>
+        <button class="toggle-btn" class:on={settings.allow_skip_broadcast} on:click={toggleSkipBroadcast}>
+          {settings.allow_skip_broadcast ? 'เปิด' : 'ปิด'}
+        </button>
+      </div>
+    {/if}
 
     <!-- Dashboard -->
     {#if activeTab === 'dashboard' && stats}
@@ -533,4 +556,16 @@
 
   .toggle-btn { padding: 2px 8px; background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); }
   .toggle-btn.on { background: rgba(76, 175, 80, 0.15); color: #4caf50; border-color: #4caf50; }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .settings-label { font-size: 0.85rem; color: var(--text-primary); }
 </style>

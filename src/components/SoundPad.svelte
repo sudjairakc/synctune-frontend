@@ -327,48 +327,6 @@
     {/each}
   </div>
 
-  <!-- TikTok slots -->
-  <div class="section-label tiktok-label">TikTok</div>
-  <div class="sound-pad-grid tiktok-grid" role="group" aria-label="TikTok sound pad slots">
-    {#each $soundPad.slice(50, 70) as cell, i (i)}
-      {@const slot = i + 50}
-      <div class="slot tiktok-slot" class:playing={slot === playingSlot} class:empty={!cell}>
-        {#if editingSlot === slot}
-          <div class="slot-edit">
-            <input class="edit-input" type="text" bind:value={editUrl}
-              placeholder="TikTok URL" disabled={savingSlot}
-              on:keydown={(e) => e.key === 'Enter' && saveEdit(slot)} />
-            <div class="edit-actions">
-              <button type="button" class="btn-small tiktok-btn" disabled={savingSlot} on:click={() => saveEdit(slot)}>
-                {savingSlot ? '…' : 'Save'}
-              </button>
-              <button type="button" class="btn-small ghost" disabled={savingSlot} on:click={cancelEdit}>Cancel</button>
-            </div>
-          </div>
-        {:else if cell}
-          <div class="slot-filled" role="button" tabindex="0"
-            on:click={() => onSlotClick(slot)}
-            on:pointerdown={(e) => onSlotPointerDown(e, slot, cell)}
-            on:pointerup={onSlotPointerUp} on:pointerleave={onSlotPointerUp}
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSlotClick(slot) } }}>
-            {#if copyingSlot === slot}<span class="copy-tooltip">Copied!</span>{/if}
-            <span class="slot-num">{slot - 49}</span>
-            <div class="tiktok-thumb-placeholder">▶</div>
-            <span class="slot-title">{cell.title || cell.video_id}</span>
-            {#if slot === playingSlot && getUserLabel(playingUserId)}
-              <span class="playing-user">{getUserLabel(playingUserId)}</span>
-            {/if}
-            <button type="button" class="slot-clear" title="Remove" aria-label="Remove slot" on:click={(e) => clearSlot(slot, e)}>×</button>
-          </div>
-        {:else}
-          <button type="button" class="slot-empty tiktok-empty" on:click={() => onSlotClick(slot)} aria-label="Add TikTok to slot {slot - 49}">
-            <span class="slot-num-empty">{slot - 49}</span>
-            <span>+</span>
-          </button>
-        {/if}
-      </div>
-    {/each}
-  </div>
 
   {#if $soundpadHistory.length > 0}
     <div class="pad-history">

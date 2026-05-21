@@ -1,5 +1,5 @@
 import { get } from 'svelte/store'
-import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders, activeVote, queueActivity } from './stores.js'
+import { queue, currentIndex, seekTime, isPlaying, history, connectionStatus, autoplay, shuffle, randomPlay, onlineUsers, chatHistory, currentRoom, currentUser, activeSpeaker, playbackSpeed, soundPad, soundpadHistory, pinnedMessages, topSpenders, activeVote, queueActivity, allowSkipBroadcast } from './stores.js'
 import { showToast } from './toast.js'
 import { playUserJoined, playChatMessage } from './sound.js'
 
@@ -106,6 +106,7 @@ export function createWebSocket(url) {
         if (payload.sound_pad != null) soundPad.set(normalizeSoundPad(payload.sound_pad))
         if (payload.playback_speed != null) playbackSpeed.set(payload.playback_speed)
         if (payload.soundpad_history != null) soundpadHistory.set(payload.soundpad_history)
+        if (payload.allow_skip_broadcast != null) allowSkipBroadcast.set(payload.allow_skip_broadcast)
         break
 
       case 'playback_mode_updated':
@@ -248,6 +249,10 @@ export function createWebSocket(url) {
         }
         break
       }
+
+      case 'settings_updated':
+        if (payload.allow_skip_broadcast != null) allowSkipBroadcast.set(payload.allow_skip_broadcast)
+        break
 
       case 'broadcast_replay':
         showToast('📡 Broadcast กำลังเล่นซ้ำ 1 รอบ — ไม่สามารถข้ามได้', 'warning', 4000)
