@@ -230,7 +230,7 @@
       <div class="settings-row">
         <span class="settings-label">⏭ Skip Broadcast ร่วมกัน</span>
         <button class="toggle-btn" class:on={settings.allow_skip_broadcast} on:click={toggleSkipBroadcast}>
-          {settings.allow_skip_broadcast ? 'เปิด' : 'ปิด'}
+          {settings.allow_skip_broadcast ? 'ปิด' : 'เปิด'}
         </button>
       </div>
     {/if}

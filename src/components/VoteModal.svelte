@@ -80,90 +80,37 @@
     </div>
   </div>
 {:else if $activeVote}
-  <!-- Vote ปกติ (remove/skip song) — banner ด้านบน -->
-  <div class="vote-banner">
-    <div class="vote-info">
-      <span class="vote-icon">{actionLabel === 'skip' ? '⏭' : '🗑'}</span>
-      <div class="vote-text">
-        <span class="vote-title">
-          <strong>{$activeVote.initiated_by}</strong> wants to {actionLabel}
-          <em>"{$activeVote.song_title}"</em>
-        </span>
-        <span class="vote-sub">
-          {$activeVote.yes_votes}/{$activeVote.required} votes needed (of {$activeVote.total}) · {countdown}s
-        </span>
+  <!-- Vote ปกติ (remove/skip song) — overlay modal กลางหน้าจอ -->
+  <div class="broadcast-overlay">
+    <div class="broadcast-modal">
+      <div class="broadcast-icon">{actionLabel === 'skip' ? '⏭' : '🗑'}</div>
+      <h3 class="broadcast-title">{actionLabel === 'skip' ? 'โหวต Skip เพลง' : 'โหวตลบเพลง'}</h3>
+      <p class="broadcast-desc">
+        <strong>{$activeVote.initiated_by}</strong> ขอ{actionLabel === 'skip' ? 'ข้าม' : 'ลบ'}<br>
+        <em>"{$activeVote.song_title}"</em>
+      </p>
+      <div class="broadcast-count">
+        {$activeVote.yes_votes}/{$activeVote.required} โหวต (จาก {$activeVote.total} คน) · {countdown}s
       </div>
+      <div class="vote-progress-bar">
+        <div
+          class="vote-progress-fill"
+          style="width: {Math.min(100, ($activeVote.yes_votes / $activeVote.required) * 100)}%"
+        ></div>
+      </div>
+      <button
+        type="button"
+        class="broadcast-skip-btn"
+        disabled={alreadyVoted}
+        on:click={castVoteAndTrack}
+      >
+        {alreadyVoted ? '✓ โหวตแล้ว' : '👍 โหวต Yes'}
+      </button>
     </div>
-    <div class="vote-progress-bar">
-      <div
-        class="vote-progress-fill"
-        style="width: {Math.min(100, ($activeVote.yes_votes / $activeVote.required) * 100)}%"
-      ></div>
-    </div>
-    <button
-      type="button"
-      class="vote-btn"
-      disabled={alreadyVoted}
-      on:click={castVoteAndTrack}
-    >
-      {alreadyVoted ? '✓ Voted' : '👍 Vote Yes'}
-    </button>
   </div>
 {/if}
 
 <style>
-  .vote-banner {
-    background: var(--bg-elevated);
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .vote-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .vote-icon {
-    font-size: 18px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .vote-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .vote-title {
-    font-size: 13px;
-    color: var(--text-primary);
-    line-height: 1.4;
-  }
-
-  .vote-title em {
-    font-style: normal;
-    color: var(--accent);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    max-width: 180px;
-    vertical-align: bottom;
-  }
-
-  .vote-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
   .vote-progress-bar {
     height: 4px;
     background: var(--bg-base);
@@ -178,29 +125,7 @@
     transition: width 0.3s ease;
   }
 
-  .vote-btn {
-    align-self: flex-end;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 14px;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-
-  .vote-btn:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-
-  .vote-btn:not(:disabled):hover {
-    opacity: 0.85;
-  }
-
-  /* Broadcast skip vote overlay */
+  /* Vote overlay */
   .broadcast-overlay {
     position: fixed;
     inset: 0;
