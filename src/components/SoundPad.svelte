@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
+  import { inputFocus } from '$lib/motionActions.js'
   import { soundPad, soundPadActive, onlineUsers, currentUser, soundpadHistory } from '$lib/stores.js'
   import { showToast } from '$lib/toast.js'
 
@@ -292,7 +293,7 @@
       <div class="slot" class:playing={slot === playingSlot} class:empty={!cell}>
         {#if editingSlot === slot}
           <div class="slot-edit">
-            <input class="edit-input" type="text" bind:value={editUrl}
+            <input class="edit-input" type="text" use:inputFocus bind:value={editUrl}
               placeholder="YouTube URL" disabled={savingSlot}
               on:keydown={(e) => e.key === 'Enter' && saveEdit(slot)} />
             <div class="edit-actions">

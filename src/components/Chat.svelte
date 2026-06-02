@@ -1,5 +1,6 @@
 <script>
   import { afterUpdate, onMount, onDestroy } from 'svelte'
+  import { inputFocus } from '$lib/motionActions.js'
   import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker, pinnedMessages } from '$lib/stores.js'
   import VoicePTT from './VoicePTT.svelte'
   import Suggestions from './Suggestions.svelte'
@@ -482,6 +483,7 @@
     />
 
     <textarea
+      use:inputFocus
       bind:value={messageText}
       on:keydown={handleKeydown}
       placeholder={threadOf ? 'Reply in thread...' : 'Type a message...'}

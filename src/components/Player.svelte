@@ -1,6 +1,9 @@
 <script>
   // 1. Imports
   import { onMount, onDestroy } from 'svelte'
+  import { animate } from 'motion'
+  import { pressable } from '$lib/motionActions.js'
+  import { Play, SkipForward, Radio, Music } from 'lucide-svelte'
   import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed, soundPadActive, allowSkipBroadcast } from '$lib/stores.js'
 
   // 2. Props
@@ -28,6 +31,11 @@
 
   // 4. Derived
   $: currentSong = $queue[$currentIndex]
+
+  let nowPlayingEl
+  $: if (nowPlayingEl && currentSong) {
+    animate(nowPlayingEl, { opacity: [0, 1], y: [10, 0] }, { duration: 0.28, easing: 'ease-out' })
+  }
   $: isBroadcast = currentSong?.is_broadcast === true
   $: if (currentSong && isPlayerReady && currentSong.queue_id !== currentQueueId) {
     loadVideo(currentSong.id, currentSong.queue_id)
@@ -264,24 +272,30 @@
   <div class="youtube-container" class:hidden={$queue.length === 0}>
     <div bind:this={playerContainer}></div>
     {#if needsResume}
-      <button class="resume-overlay" on:click={handleResumeClick}>
-        <span class="resume-icon">▶</span>
-        <span class="resume-text">Tap to play</span>
+      <button class="resume-overlay" use:pressable on:click={handleResumeClick} aria-label="Tap to play">
+        <span class="resume-icon"><Play size="48" strokeWidth="2" fill="currentColor" /></span>
       </button>
     {/if}
   </div>
 
   {#if $queue.length === 0}
     <div class="player-placeholder">
+      <Music size="32" strokeWidth="1.5" />
       <p>Add a song to start playing</p>
     </div>
   {:else if currentSong}
-    <div class="now-playing-info">
+    <div class="now-playing-info" bind:this={nowPlayingEl}>
       {#if currentSong.thumbnail}
         <img class="now-playing-thumb" src={currentSong.thumbnail} alt="" aria-hidden="true" />
       {/if}
       <div class="now-playing-text">
-        <span class="label" class:broadcast={isBroadcast}>{isBroadcast ? '📡 Broadcast' : 'Now Playing'}</span>
+        <span class="label" class:broadcast={isBroadcast}>
+          {#if isBroadcast}
+            <Radio size="11" strokeWidth="2.5" /><span>Broadcast</span>
+          {:else}
+            <span class="eq"><span></span><span></span><span></span></span>
+          {/if}
+        </span>
         <span class="title">{currentSong.title || currentSong.id}</span>
         <span class="added-by">Added by {currentSong.added_by}</span>
       </div>
@@ -294,7 +308,9 @@
           >{rate}x</button>
         {/each}
       </div>
-      <button class="skip-btn" on:click={handleSkip} title={isBroadcast && !$allowSkipBroadcast ? 'Admin ปิดการ skip broadcast' : 'Skip song'} disabled={isBroadcast && !$allowSkipBroadcast}>⏭</button>
+      <button class="skip-btn" use:pressable on:click={handleSkip} title={isBroadcast && !$allowSkipBroadcast ? 'Admin ปิดการ skip broadcast' : 'Skip song'} disabled={isBroadcast && !$allowSkipBroadcast} aria-label="Skip">
+        <SkipForward size="18" strokeWidth="2" fill="currentColor" />
+      </button>
     </div>
   {/if}
 </div>
@@ -302,20 +318,27 @@
 <style>
   .player-wrapper {
     background: var(--bg-surface);
-    border-radius: 8px;
+    backdrop-filter: var(--blur-bg);
+    -webkit-backdrop-filter: var(--blur-bg);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     margin-bottom: 16px;
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-2);
   }
 
   .player-placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 200px;
+    gap: 10px;
+    height: 220px;
     color: var(--text-muted);
     font-size: 14px;
   }
+
+  .player-placeholder p { margin: 0; }
 
   .youtube-container {
     position: relative;
@@ -353,31 +376,37 @@
   .resume-overlay:hover { background: rgba(0, 0, 0, 0.45); }
 
   .resume-icon {
-    font-size: 48px;
-    line-height: 1;
-    color: var(--accent);
-  }
-
-  .resume-text {
-    font-size: 14px;
-    color: #ccc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #FF6482);
+    color: white;
+    box-shadow: 0 12px 32px rgba(255, 55, 95, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    padding-left: 6px;
   }
 
   .now-playing-info {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
+    gap: 14px;
+    padding: 14px 18px;
     background: var(--now-playing-bg);
+    backdrop-filter: var(--blur-bg);
+    -webkit-backdrop-filter: var(--blur-bg);
     border-top: 1px solid var(--border);
+    will-change: transform;
   }
 
   .now-playing-thumb {
-    width: 48px;
-    height: 36px;
+    width: 52px;
+    height: 38px;
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 8px;
     flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   }
 
   .now-playing-text {
@@ -389,18 +418,44 @@
   }
 
   .label {
-    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
     color: var(--accent);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     flex-shrink: 0;
+  }
+
+  /* Equalizer bars (animated) */
+  .eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+  }
+  .eq span {
+    display: block;
+    width: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    animation: eqBar 1s ease-in-out infinite;
+  }
+  .eq span:nth-child(1) { animation-delay: -0.6s; }
+  .eq span:nth-child(2) { animation-delay: -0.3s; }
+  .eq span:nth-child(3) { animation-delay: -0.9s; }
+  @keyframes eqBar {
+    0%, 100% { height: 3px; }
+    50%      { height: 12px; }
   }
 
   .title {
     color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -413,19 +468,25 @@
   }
 
   .skip-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 18px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 4px;
-    line-height: 1;
-    transition: color 0.15s;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
     flex-shrink: 0;
   }
 
-  .skip-btn:hover { color: var(--accent); }
+  .skip-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
   .skip-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .label.broadcast { color: #e05c00; }
 
@@ -436,18 +497,23 @@
   }
 
   .speed-btn {
-    background: none;
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 4px 9px;
+    border-radius: var(--radius-pill);
     line-height: 1.4;
-    transition: color 0.15s, border-color 0.15s;
+    transition: all 0.2s;
   }
 
-  .speed-btn:hover { color: var(--accent); border-color: var(--accent); }
-  .speed-btn.active { color: var(--accent); border-color: var(--accent); }
+  .speed-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+  .speed-btn.active {
+    color: white;
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(255, 55, 95, 0.4);
+  }
 </style>
