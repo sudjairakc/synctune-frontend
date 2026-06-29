@@ -5,6 +5,7 @@
   import { pressable } from '$lib/motionActions.js'
   import { Play, SkipForward, Radio, Music } from 'lucide-svelte'
   import { queue, currentIndex, seekTime, isPlaying, ttsActive, activeSpeaker, playbackSpeed, soundPadActive, allowSkipBroadcast } from '$lib/stores.js'
+  import { shouldResync } from '$lib/seek.js'
 
   // 2. Props
   export let ws = null
@@ -240,11 +241,7 @@
         return
       }
       const drift = clientSeek - serverSeek
-      // client นำหน้า server (drift>0): ปกติเพราะ counter หยาบทีละ interval — ดึงเฉพาะเมื่อนำมากเกินจริง
-      // client ตามหลัง server (drift<0): ดึงให้ทันที่ threshold ปกติ
-      const tooFarAhead = drift > SEEK_LEAD_TOLERANCE
-      const tooFarBehind = -drift > SEEK_DRIFT_THRESHOLD
-      if (tooFarAhead || tooFarBehind) {
+      if (shouldResync(clientSeek, serverSeek, SEEK_DRIFT_THRESHOLD, SEEK_LEAD_TOLERANCE)) {
         player.seekTo(serverSeek, true)
         console.info('[Player] seeking to', serverSeek, '(drift:', drift.toFixed(1), 's)')
       }

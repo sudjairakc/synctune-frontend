@@ -1,8 +1,7 @@
 <script>
   import { afterUpdate, onMount, onDestroy } from 'svelte'
-  import { get } from 'svelte/store'
   import { inputFocus } from '$lib/motionActions.js'
-  import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker, pinnedMessages } from '$lib/stores.js'
+  import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker, pinnedMessages, currentRoom } from '$lib/stores.js'
   import VoicePTT from './VoicePTT.svelte'
   import Suggestions from './Suggestions.svelte'
 
@@ -13,9 +12,10 @@
   let messageText = ''
   let listEl
   let autoScroll = true
-  // seed ด้วยแชทล่าสุดที่มีอยู่ตอนเข้าห้อง — ไม่อ่าน TTS ข้อความเก่า อ่านเฉพาะข้อความใหม่หลัง join
-  const initialChat = get(chatHistory)
-  let lastReadId = initialChat.length ? initialChat[initialChat.length - 1].id : null
+  let lastReadId = null
+  // chatHistory ถูกโหลดหลัง Chat mount (ตอน room_joined) — seed lastReadId ครั้งแรกที่มีข้อความ
+  // เพื่อไม่ให้ TTS อ่านแชทเก่าตอนเข้าห้อง อ่านเฉพาะข้อความใหม่หลัง join
+  let chatReady = false
 
   // Reply / Thread state
   let replyTo = null     // ChatMessage being replied to
@@ -40,8 +40,15 @@
 
   $: charsLeft = MAX_LENGTH - messageText.length
 
-  // TTS
-  $: if ($soundEnabled && $chatHistory.length > 0) {
+  // เข้าห้องสำเร็จ (currentRoom ถูกตั้งตอน room_joined): จำ id แชทล่าสุดที่มีอยู่ ณ ตอน join โดยไม่อ่าน
+  // → TTS อ่านเฉพาะข้อความใหม่หลังจากนั้น (ห้องว่างก็ยังอ่านข้อความแรกที่เข้ามา เพราะ lastReadId=null)
+  $: if ($currentRoom && !chatReady) {
+    chatReady = true
+    lastReadId = $chatHistory.length ? $chatHistory[$chatHistory.length - 1].id : null
+  }
+
+  // TTS — อ่านเฉพาะข้อความใหม่หลัง seed แล้ว
+  $: if (chatReady && $soundEnabled && $chatHistory.length > 0) {
     const lastMsg = $chatHistory[$chatHistory.length - 1]
     if (lastMsg.id !== lastReadId && !lastMsg.deleted) {
       lastReadId = lastMsg.id
