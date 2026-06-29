@@ -27,6 +27,9 @@
   let lastLoadUsedSeekOffset = false
 
   const SEEK_DRIFT_THRESHOLD = 3
+  // server seek tick ทีละ 5 วิ (coarse) — client เล่นต่อเนื่องจึงนำหน้า counter ได้ถึง ~1 interval เป็นปกติ
+  // ต้องมากกว่า SEEK_BROADCAST_INTERVAL เพื่อไม่กระชากถอยหลังจาก drift ที่เกิดตามธรรมชาติ
+  const SEEK_LEAD_TOLERANCE = 8
   const USER_SEEK_COOLDOWN = 5000
 
   // 4. Derived
@@ -236,8 +239,12 @@
         console.warn('[Player] seek skipped: serverSeek', serverSeek, '>=', duration, 's')
         return
       }
-      const drift = Math.abs(clientSeek - serverSeek)
-      if (drift > SEEK_DRIFT_THRESHOLD) {
+      const drift = clientSeek - serverSeek
+      // client นำหน้า server (drift>0): ปกติเพราะ counter หยาบทีละ interval — ดึงเฉพาะเมื่อนำมากเกินจริง
+      // client ตามหลัง server (drift<0): ดึงให้ทันที่ threshold ปกติ
+      const tooFarAhead = drift > SEEK_LEAD_TOLERANCE
+      const tooFarBehind = -drift > SEEK_DRIFT_THRESHOLD
+      if (tooFarAhead || tooFarBehind) {
         player.seekTo(serverSeek, true)
         console.info('[Player] seeking to', serverSeek, '(drift:', drift.toFixed(1), 's)')
       }

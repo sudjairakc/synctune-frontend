@@ -8,6 +8,7 @@
 
   let isSpeaking = false
   let localStream = null
+  let audioUnlockArmed = false
 
   // clientID → RTCPeerConnection (speaker keeps one per listener)
   const peers = new Map()
@@ -69,7 +70,7 @@
     const pc = peers.get(payload.user_id)
     if (pc) { pc.close(); peers.delete(payload.user_id) }
     const audio = audioEls.get(payload.user_id)
-    if (audio) { audio.srcObject = null; audioEls.delete(payload.user_id) }
+    if (audio) { audio.srcObject = null; audio.remove(); audioEls.delete(payload.user_id) }
   }
 
   // speaker receives: listener wants audio → create offer
@@ -86,14 +87,7 @@
   async function handleVoiceOffer({ from, sdp }) {
     const pc = createPeerConnection(from)
     pc.ontrack = (event) => {
-      let audio = audioEls.get(from)
-      if (!audio) {
-        audio = new Audio()
-        audio.autoplay = true
-        audioEls.set(from, audio)
-      }
-      audio.srcObject = event.streams[0]
-      audio.play().catch(() => {})
+      attachRemoteAudio(from, event.streams[0])
     }
     await pc.setRemoteDescription({ type: 'offer', sdp })
     const answer = await pc.createAnswer()
@@ -124,16 +118,48 @@
       if (candidate) ws.send('voice_ice', { to: clientID, candidate })
     }
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') { pc.close(); peers.delete(clientID) }
+      if (pc.connectionState === 'failed') {
+        pc.close()
+        peers.delete(clientID)
+        showToast('Voice connection failed', 'error')
+      }
     }
     peers.set(clientID, pc)
     return pc
   }
 
+  // remote audio ต้องอยู่ใน DOM จริง และ play() อาจถูก browser autoplay policy บล็อก — ห้าม fail เงียบ
+  function attachRemoteAudio(clientID, stream) {
+    let audio = audioEls.get(clientID)
+    if (!audio) {
+      audio = new Audio()
+      audio.autoplay = true
+      audio.playsInline = true
+      audio.style.display = 'none'
+      document.body.appendChild(audio)
+      audioEls.set(clientID, audio)
+    }
+    audio.srcObject = stream
+    audio.play().catch(() => armAudioUnlock())
+  }
+
+  // autoplay ถูกบล็อก → ขอ gesture จาก user ครั้งเดียวแล้วเล่นเสียงที่ค้างทั้งหมด
+  function armAudioUnlock() {
+    if (audioUnlockArmed) return
+    audioUnlockArmed = true
+    showToast('แตะหน้าจอเพื่อเปิดเสียงพูด', 'info')
+    const resume = () => {
+      audioUnlockArmed = false
+      window.removeEventListener('pointerdown', resume)
+      audioEls.forEach(a => a.play().catch(() => {}))
+    }
+    window.addEventListener('pointerdown', resume, { once: true })
+  }
+
   function closePeers() {
     peers.forEach(pc => pc.close())
     peers.clear()
-    audioEls.forEach(a => { a.srcObject = null })
+    audioEls.forEach(a => { a.srcObject = null; a.remove() })
     audioEls.clear()
   }
 

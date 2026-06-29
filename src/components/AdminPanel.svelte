@@ -229,9 +229,21 @@
     {#if activeTab === 'dashboard'}
       <div class="settings-row">
         <span class="settings-label">⏭ Skip Broadcast ร่วมกัน</span>
-        <button class="toggle-btn" class:on={settings.allow_skip_broadcast} on:click={toggleSkipBroadcast}>
-          {settings.allow_skip_broadcast ? 'ปิด' : 'เปิด'}
-        </button>
+        <div class="setting-control">
+          <span class="state-text" class:on={settings.allow_skip_broadcast}>
+            {settings.allow_skip_broadcast ? 'เปิดอยู่' : 'ปิดอยู่'}
+          </span>
+          <button
+            class="switch"
+            class:on={settings.allow_skip_broadcast}
+            role="switch"
+            aria-checked={settings.allow_skip_broadcast}
+            aria-label="Skip Broadcast ร่วมกัน"
+            on:click={toggleSkipBroadcast}
+          >
+            <span class="switch-knob"></span>
+          </button>
+        </div>
       </div>
     {/if}
 
@@ -568,4 +580,34 @@
   }
 
   .settings-label { font-size: 0.85rem; color: var(--text-primary); }
+
+  .setting-control { display: flex; align-items: center; gap: 10px; }
+  .state-text { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); min-width: 48px; text-align: right; }
+  .state-text.on { color: #4caf50; }
+
+  .switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 999px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .switch.on { background: #4caf50; border-color: #4caf50; }
+  .switch-knob {
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.15s;
+  }
+  .switch.on .switch-knob { left: 20px; }
 </style>

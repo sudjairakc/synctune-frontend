@@ -1,5 +1,6 @@
 <script>
   import { afterUpdate, onMount, onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import { inputFocus } from '$lib/motionActions.js'
   import { chatHistory, onlineUsers, currentUser, ttsActive, soundEnabled, activeSpeaker, pinnedMessages } from '$lib/stores.js'
   import VoicePTT from './VoicePTT.svelte'
@@ -12,7 +13,9 @@
   let messageText = ''
   let listEl
   let autoScroll = true
-  let lastReadId = null
+  // seed ด้วยแชทล่าสุดที่มีอยู่ตอนเข้าห้อง — ไม่อ่าน TTS ข้อความเก่า อ่านเฉพาะข้อความใหม่หลัง join
+  const initialChat = get(chatHistory)
+  let lastReadId = initialChat.length ? initialChat[initialChat.length - 1].id : null
 
   // Reply / Thread state
   let replyTo = null     // ChatMessage being replied to
